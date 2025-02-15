@@ -1,0 +1,6 @@
+services:
+  api:
+    container_name: boiler_api_container
+    build: .
+    ports:
+      - "3000:3000"
