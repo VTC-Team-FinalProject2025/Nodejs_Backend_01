@@ -1,6 +1,8 @@
 import express from "express";
 import { BaseController } from "./controllers/abstractions/base-controller";
 import errorMiddleware from "./middlewares/error.middleware";
+import swaggerUi from "swagger-ui-express";
+import { openapiSpecification } from "./configs/setUpSwagger";
 
 class App {
   public app: express.Application;
@@ -27,6 +29,11 @@ class App {
     this.app.get("/", (request, response) => {
       response.send("Application is running");
     });
+    this.app.use(
+      "/api-docs",
+      swaggerUi.serve,
+      swaggerUi.setup(openapiSpecification),
+    );
     controllers.forEach((controller) => {
       this.app.use("/", controller.router);
     });
