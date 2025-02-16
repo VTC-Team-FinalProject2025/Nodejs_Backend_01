@@ -1,7 +1,6 @@
-import nodemailer from "nodemailer";
 import "dotenv/config";
-import { EMAIL_ADDRESS, MAIL_PASSWORD, URL_CLIENT } from "../secrets";
-
+import { URL_CLIENT } from "../constants";
+import Mailer from "../helpers/Mailer";
 const sendEmailResetPassword = async (user: any, resetToken: any) => {
   const resetUrl = `${URL_CLIENT}/reset-password?token=${resetToken}&name=${user.loginName}`;
   let htmlContent = `
@@ -13,22 +12,7 @@ const sendEmailResetPassword = async (user: any, resetToken: any) => {
       <p>Trân trọng,</p>
       <p>Đội ngũ hỗ trợ của chúng tôi</p>
   `;
-  const transporter = nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: {
-      user: EMAIL_ADDRESS,
-      pass: MAIL_PASSWORD,
-    },
-  });
-
-  await transporter.sendMail({
-    from: EMAIL_ADDRESS,
-    to: user.email,
-    subject: "Email đặt lại mật khẩu ",
-    html: htmlContent,
-  });
+  Mailer.sendMail({ htmlContent, to: user.email, subject: "Email đặt lại mật khẩu" });
 };
 
 export default sendEmailResetPassword;

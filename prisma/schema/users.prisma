@@ -9,6 +9,6 @@ model Users {
     status    Boolean  @default(false)
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
-
+    isEmailVertify Boolean @default(false)
     @@map("users")
 }

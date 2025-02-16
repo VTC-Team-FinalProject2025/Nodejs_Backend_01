@@ -2,27 +2,40 @@
  * @swagger
  * components:
  *   schemas:
- *     SignupInput:
- *       type: object
- *       required:
- *         - email
- *         - name
- *         - password
- *         - password_confirmation
- *       properties:
- *         email:
- *           type: string
- *           description: Email của người dùng
- *         name:
- *           type: string
- *           description: Tên của người dùng
- *         password:
- *           type: string
- *           description: Mật khẩu của người dùng
- *         password_confirmation:
- *           type: string
- *           description: Xác nhận mật khẩu
- *     LoginInput:
+ *    SignupInput:
+ *     type: object
+ *     required:
+ *       - email
+ *       - firstName
+ *       - lastName
+ *       - loginName
+ *       - phone
+ *       - password
+ *       - password_confirmation
+ *     properties:
+ *       email:
+ *         type: string
+ *         description: Email của người dùng
+ *       firstName:
+ *         type: string
+ *         description: Họ của người dùng
+ *       lastName:
+ *         type: string
+ *         description: Tên của người dùng
+ *       loginName:
+ *         type: string
+ *         description: Tên đăng nhập của người dùng
+ *       phone:
+ *         type: string
+ *         description: Số điện thoại của người dùng
+ *       password:
+ *         type: string
+ *         description: Mật khẩu của người dùng
+ *       password_confirmation:
+ *         type: string
+ *         description: Xác nhận mật khẩu
+ * 
+ *    LoginInput:
  *       type: object
  *       required:
  *         - input
@@ -34,38 +47,6 @@
  *         password:
  *           type: string
  *           description: Mật khẩu của người dùng
- *     UpdateUserInput:
- *       type: object
- *       properties:
- *         name:
- *           type: string
- *           description: Tên của người dùng
- *         email:
- *           type: string
- *           description: Email của người dùng
- *         password:
- *           type: string
- *           description: Mật khẩu của người dùng
- *     UserResponse:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           description: ID người dùng
- *         name:
- *           type: string
- *           description: Tên của người dùng
- *         email:
- *           type: string
- *           description: Email của người dùng
- *         createAt:
- *           type: string
- *           format: date-time
- *           description: Thời điểm tạo tài khoản
- *         updateAt:
- *           type: string
- *           format: date-time
- *           description: Thời điểm cập nhật tài khoản
  */
 
 
@@ -74,7 +55,7 @@
  * /auth/login:
  *   post:
  *     summary: Đăng nhập
- *     tags: [User]
+ *     tags: [Auth]
  *     requestBody:
  *       required: true
  *       content:
@@ -86,14 +67,111 @@
  *         description: Đăng nhập thành công
  *         content:
  *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/UserResponse'
+ *            schema:
+ *              type: object
+ *              properties:
+ *                  token:
+ *                      type: string
+ *                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
+ *                  refresh_token:
+ *                      type: string
+ *                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
  *       400:
- *         description: Sai mật khẩu
+ *         description: Incorrect password
+ *       401:
+ *        description: Email is not vertify
+ *       402:
+ *        description: Account is blocked
  *       404:
- *         description: Tài khoản không tồn tại
+ *         description: Account does not exist
  *       500:
- *         description: Lỗi server
+ *         description: Internal Server Error
+ * /auth/signup:
+ *  post:
+ *     summary: Đăng ký
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/SignupInput'
+ *     responses:
+ *       200:
+ *         description: Đăng nhập thành công
+ *         content:
+ *           application/json:
+ *            schema:
+ *              type: object
+ *              properties:
+ *                  message:
+ *                      type: string
+ *                      example: Successful registration
+ *       401:
+ *         description: Password authentication mismatch
+ *       400:
+ *         description: Already have an account/Phone number already exists/Login name already exists
+ *       500:
+ *         description: Internal Server Error
+ * /auth/logout:
+ *   post:
+ *     summary: Đăng xuất
+ *     tags: [Auth]
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       500:
+ *         description: Internal Server Error
+ * 
+ * /auth/forgot-password:
+ *   post:
+ *     summary: Quên mật khẩu
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: Email của người dùng
+ *     responses:
+ *       200:
+ *         description: Successful email person
+ *       400:
+ *         description: Email not filled in/Not an email address
+ *       404:
+ *         description: This email does not exist
+ *       500:
+ *         description: Internal Server Error
+ * 
+ * /auth/verify-email:
+ *   post:
+ *     summary: Xác thực email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Token xác thực
+ *     responses:
+ *       200:
+ *         description: Vertify email successful
+ *       400:
+ *         description: Token is invalid
+ *       401:
+ *        description: Email is already vertify
+ *       404:
+ *         description: Token not found
+ *       500:
+ *         description: Internal Server Error
  */
 
 
