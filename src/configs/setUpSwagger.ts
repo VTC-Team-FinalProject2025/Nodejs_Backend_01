@@ -27,7 +27,7 @@ const options = {
             },
         ],
     },
-    apis: ['./src/swagger/*.ts'],
+    apis: ['./src/swaggers/*.ts'],
 };
 
 export const openapiSpecification = swaggerJSDoc(options);
