@@ -6,9 +6,11 @@ import bcrypt, { hashSync } from "bcrypt";
 import {
   GenerateRefreshToken,
   GenerateToken,
+  GenerateResetPasswordToken,
 } from "../middlewares/token.middleware";
 import ValidateSchema from "../middlewares/validateSchema.middleware";
 import { SignupFormSchema, LoginFormSchema } from "../schemas/auth";
+import SendEmailResetPassword from "../emails/emailForgotPassword.email";
 
 export default class HeroController extends BaseController {
   public path = "/auth";
@@ -30,6 +32,7 @@ export default class HeroController extends BaseController {
       this.signup,
     );
     this.router.post(this.path + "/logout", this.logout);
+    this.router.post(this.path + "/forgot-password", this.forgotPassword);
   }
 
   private isValidEmail(email: string): boolean {
@@ -132,5 +135,33 @@ export default class HeroController extends BaseController {
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
     });
+  };
+
+  forgotPassword = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { email } = request.body;
+    const mailFormat = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
+    const isCheckEmail = mailFormat.test(email);
+    if (!email) {
+      return next(new HttpException(401, "Email not filled in"));
+    } else if (!isCheckEmail) {
+      return next(new HttpException(401, "Not an email address"));
+    }
+    let user = await this.prisma.users.findFirst({ where: { email } });
+
+    if (!user) {
+      return next(new HttpException(401, "This email does not exist"));
+    }
+    const resetToken = await GenerateResetPasswordToken(
+      { userId: user.id },
+      next,
+    );
+
+    await SendEmailResetPassword(user, resetToken);
+
+    response.json({ message: "Successful email person" });
   };
 }
