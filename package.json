@@ -28,9 +28,13 @@
     "express": "^4.17.3",
     "prisma": "^6.3.1",
     "rimraf": "^3.0.2",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
+    "@types/swagger-jsdoc": "^6.0.4",
+    "@types/swagger-ui-express": "^4.1.7",
     "concurrently": "^7.0.0",
     "nodemon": "^2.0.15"
   }
