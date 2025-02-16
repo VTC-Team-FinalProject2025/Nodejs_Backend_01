@@ -1,4 +1,6 @@
 import express from "express";
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
 import { BaseController } from "./controllers/abstractions/base-controller";
 import errorMiddleware from "./middlewares/error.middleware";
 import swaggerUi from "swagger-ui-express";
@@ -18,6 +20,8 @@ class App {
   }
 
   private initializeMiddlewares() {
+    this.app.use(cookieParser());
+    this.app.use(cors());
     this.app.use(express.json());
   }
 
@@ -35,7 +39,7 @@ class App {
       swaggerUi.setup(openapiSpecification),
     );
     controllers.forEach((controller) => {
-      this.app.use("/", controller.router);
+      this.app.use("/api", controller.router);
     });
   }
 
