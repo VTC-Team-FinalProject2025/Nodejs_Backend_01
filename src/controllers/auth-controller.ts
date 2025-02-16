@@ -29,6 +29,7 @@ export default class HeroController extends BaseController {
       ValidateSchema(SignupFormSchema),
       this.signup,
     );
+    this.router.post(this.path + "/logout", this.logout);
   }
 
   private isValidEmail(email: string): boolean {
@@ -113,5 +114,23 @@ export default class HeroController extends BaseController {
       },
     });
     response.json(user);
+  };
+
+  logout = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    response.clearCookie("token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
+
+    response.clearCookie("refresh_token", {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+    });
   };
 }
