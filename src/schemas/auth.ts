@@ -11,7 +11,7 @@ export const SignupFormSchema = z.object({
         .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
         .regex(/\d/, { message: "Password must contain at least one number" })
         .regex(/[!@#$%^&*(),.?":{}|<>]/, { message: "Password must contain at least one special character" }),
-        password_confirmation: z.string()
+    password_confirmation: z.string()
         .min(6, { message: "Password must be at least 6 characters long" })
         .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
         .regex(/\d/, { message: "Password must contain at least one number" })
@@ -26,6 +26,20 @@ export const LoginFormSchema = z.object({
             message: "Input must be a valid email or username",
         }),
     password: z.string()
+        .min(6, { message: "Password must be at least 6 characters long" })
+        .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+        .regex(/\d/, { message: "Password must contain at least one number" })
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, { message: "Password must contain at least one special character" }),
+});
+
+export const ForgetPasswordFormSchema = z.object({
+    token: z.string(),
+    password: z.string()
+        .min(6, { message: "Password must be at least 6 characters long" })
+        .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
+        .regex(/\d/, { message: "Password must contain at least one number" })
+        .regex(/[!@#$%^&*(),.?":{}|<>]/, { message: "Password must contain at least one special character" }),
+    password_confirmation: z.string()
         .min(6, { message: "Password must be at least 6 characters long" })
         .regex(/[A-Z]/, { message: "Password must contain at least one uppercase letter" })
         .regex(/\d/, { message: "Password must contain at least one number" })

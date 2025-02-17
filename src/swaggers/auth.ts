@@ -171,6 +171,37 @@
  *         description: Token not found
  *       500:
  *         description: Internal Server Error
+ * /auth/reset-password:
+ *   post:
+ *     summary: Đặt lại mật khẩu
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               token:
+ *                 type: string
+ *                 description: Token trả về từ api forget password
+ *               password:
+ *                type: string
+ *                description: Mật khẩu mới
+ *               password_confirmation:
+ *                type: string
+ *                description: Xác nhận mật khẩu mới
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *       400:
+ *         description: Token is invalid
+ *       401:
+ *        description: Password authentication mismatch
+ *       404:
+ *         description: Token not found
+ *       500:
+ *         description: Internal Server Error
  */
 
 /**

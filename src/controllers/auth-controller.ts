@@ -4,7 +4,7 @@ import HttpException from "../exceptions/http-exception";
 import bcrypt, { hashSync } from "bcrypt";
 import JWTHelper from "../helpers/JWT";
 import ValidateSchema from "../middlewares/validateSchema.middleware";
-import { SignupFormSchema, LoginFormSchema } from "../schemas/auth";
+import { SignupFormSchema, LoginFormSchema, ForgetPasswordFormSchema } from "../schemas/auth";
 import SendEmailResetPassword from "../emails/emailForgotPassword.email";
 import { CookieKeys } from "../constants";
 import CookieHelper from "../helpers/Cookie";
@@ -12,13 +12,16 @@ import ValidatorHelper from "../helpers/Validator";
 import { BYCRYPT_SALT } from "../constants";
 import EmailAuthenticatedUser from "../emails/emailAuthenticatedUser";
 import UserRepository from "../repositories/UserRepository";
+import { v4 as uuidv4} from "uuid";
 
 export default class AuthController extends BaseController {
   public path = "/auth";
-  public userRepo: UserRepository;
-  constructor(userRepo: UserRepository) {
+  public userRepo : UserRepository;
+  public passport;
+  constructor(userRepo: UserRepository, passport : any) {
     super();
     this.userRepo = userRepo;
+    this.passport = passport;
     this.initializeRoutes();
   }
 
@@ -36,7 +39,21 @@ export default class AuthController extends BaseController {
     this.router.post(this.path + "/verify-email", this.vertifyEmail);
     this.router.post(this.path + "/logout", this.logout);
     this.router.post(this.path + "/forgot-password", this.forgotPassword);
+    this.router.post(this.path + "/reset-password", ValidateSchema(ForgetPasswordFormSchema), this.resetPassword);
     this.router.post(this.path + "/refresh-token", this.resetToken);
+    this.router.get(this.path + "/google", this.passport.authenticate("google", { scope: ["profile", "email"] }));
+    this.router.get(
+      this.path + "/google/callback",
+      this.passport.authenticate("google", { session: false }),
+      this.handleGoogleCallback,
+    );
+
+    this.router.get(this.path + "/github", this.passport.authenticate("github", { scope: ["user:email"] }));
+    this.router.get(
+      this.path + "/github/callback",
+      this.passport.authenticate("github", { session: false }),
+      this.handleGitHubCallback,
+    );
   }
 
   login = async (
@@ -192,6 +209,99 @@ export default class AuthController extends BaseController {
 
     response.json({ message: "Successful email person" });
   };
+  resetPassword = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { token, password, password_confirmation } = request.body;
+    if (password !== password_confirmation) {
+      return next(new HttpException(401, "Password authentication mismatch"));
+    }
+    if (!token) {
+      return next(new HttpException(404, "Token not found"));
+    }
+    const payload = JWTHelper.verifyToken(token as string, "RESET_PASSWORD") as any;
+    if (!payload) {
+      return next(new HttpException(400, "Token is invalid"));
+    }
+    const tokenPayload = JWTHelper.decodeToken(token as string) as { userId: number };
+    const user = await this.userRepo.getUserById(tokenPayload.userId);
+    if (!user) {
+      return next(new HttpException(404, "User not found"));
+    }
+    await this.userRepo.updateUser(tokenPayload.userId, {
+      password: hashSync(password, BYCRYPT_SALT),
+    });
+    response.json({ message: "Password reset successful" });
+  };
+  handleGoogleCallback = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const user = (request.user as any).profile as GoogleProfile;
+    const userExisted = await this.userRepo.getUserByEmail(user.emails[0].value);
+    if(userExisted){
+      const token = JWTHelper.generateToken({ userId: userExisted.id }, "ACCESS");
+      const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
+      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
+      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      return response.json({ token, refresh_token });
+    } else {
+      let userCreate = await this.userRepo.createUser({
+        firstName: user.name.givenName,
+        lastName: user.name.familyName,
+        loginName: uuidv4(),
+        email: user.emails[0].value,
+        password: hashSync(uuidv4(), BYCRYPT_SALT),
+        isEmailVertify: true,
+        status: true,
+        phone: "",
+      });
+      const token = JWTHelper.generateToken({ userId: userCreate.id }, "ACCESS");
+      const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
+      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
+      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      return response.json({ token, refresh_token });
+    }
+  };
+
+  handleGitHubCallback = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const user = (request.user as any).profile as GitHubProfile;
+    const userExisted = await this.userRepo.getUserByGithubId(user.id);
+    if(userExisted){
+      const token
+        = JWTHelper.generateToken({ userId: userExisted.id }, "ACCESS");
+      const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
+      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
+      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      return response.json({ token, refresh_token });
+    } else {
+      if((await this.userRepo.getUserByEmail(user.email.split("@")[0] + "+vtcapp" + user.email.split("@")[1]))){
+        return next(new HttpException(400, "Email already existed"));
+      }
+      let userCreate = await this.userRepo.createUser({
+        firstName: "",
+        lastName: user.displayName,
+        loginName: uuidv4(),
+        email: user.email.split("@")[0] + "+vtcapp_github@" + user.email.split("@")[1],
+        password: hashSync(uuidv4(), BYCRYPT_SALT),
+        isEmailVertify: false,
+        status: true,
+        githubId: user.id,
+      });
+      const token = JWTHelper.generateToken({ userId: userCreate.id }, "ACCESS");
+      const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
+      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
+      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      return response.json({ token, refresh_token });
+    }
+  };
 
   resetToken = async (
     request: express.Request,
@@ -223,5 +333,24 @@ export default class AuthController extends BaseController {
     CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
     CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
     response.json({ token, refresh_token });
-  };
+  }
+}
+
+type GoogleProfile = {
+  id: string,
+  name: {
+    familyName: string,
+    givenName: string,
+  },
+  emails: {value: string, verified: boolean}[],
+  photos: {value: string}[],
+}
+
+type GitHubProfile = {
+  id: string,
+  displayName: string,
+  username: string,
+  profileUrl: string,
+  photos: {value: string}[],
+  email: string,
 }

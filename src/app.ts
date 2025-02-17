@@ -5,6 +5,7 @@ import { BaseController } from "./controllers/abstractions/base-controller";
 import errorMiddleware from "./middlewares/error.middleware";
 import swaggerUi from "swagger-ui-express";
 import { openapiSpecification } from "./configs/setUpSwagger";
+import Passport from "./configs/auth/Passport";
 
 class App {
   public app: express.Application;
@@ -15,6 +16,7 @@ class App {
     this.port = port;
 
     this.initializeMiddlewares();
+    this.initializePassport();
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
   }
@@ -41,6 +43,11 @@ class App {
     controllers.forEach((controller) => {
       this.app.use("/api", controller.router);
     });
+  }
+
+  private initializePassport() {
+    // Initialize passport
+    this.app.use(Passport.initialize());
   }
 
   public listen() {
