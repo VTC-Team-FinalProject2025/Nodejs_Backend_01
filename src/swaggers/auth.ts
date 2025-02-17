@@ -34,7 +34,7 @@
  *       password_confirmation:
  *         type: string
  *         description: Xác nhận mật khẩu
- * 
+ *
  *    LoginInput:
  *       type: object
  *       required:
@@ -48,7 +48,6 @@
  *           type: string
  *           description: Mật khẩu của người dùng
  */
-
 
 /**
  * @swagger
@@ -122,7 +121,7 @@
  *         description: Logout successful
  *       500:
  *         description: Internal Server Error
- * 
+ *
  * /auth/forgot-password:
  *   post:
  *     summary: Quên mật khẩu
@@ -146,7 +145,7 @@
  *         description: This email does not exist
  *       500:
  *         description: Internal Server Error
- * 
+ *
  * /auth/verify-email:
  *   post:
  *     summary: Xác thực email
@@ -205,4 +204,41 @@
  *         description: Internal Server Error
  */
 
-
+/**
+ * @swagger
+ * /auth/refresh-token:
+ *   post:
+ *     summary: Làm mới token truy cập
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               refreshToken:
+ *                 type: string
+ *                 description: Refresh token hợp lệ để lấy token mới
+ *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
+ *     responses:
+ *       200:
+ *         description: Trả về access token và refresh token mới
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
+ *                 refresh_token:
+ *                   type: string
+ *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
+ *       400:
+ *         description: Thiếu refresh token hoặc token không hợp lệ
+ *       404:
+ *         description: Người dùng không tồn tại
+ *       500:
+ *         description: Lỗi server
+ */

@@ -40,7 +40,7 @@ export default class AuthController extends BaseController {
     this.router.post(this.path + "/logout", this.logout);
     this.router.post(this.path + "/forgot-password", this.forgotPassword);
     this.router.post(this.path + "/reset-password", ValidateSchema(ForgetPasswordFormSchema), this.resetPassword);
-    
+    this.router.post(this.path + "/refresh-token", this.resetToken);
     this.router.get(this.path + "/google", this.passport.authenticate("google", { scope: ["profile", "email"] }));
     this.router.get(
       this.path + "/google/callback",
@@ -62,7 +62,9 @@ export default class AuthController extends BaseController {
     next: express.NextFunction,
   ) => {
     const { input, password } = request.body;
-    let user = ValidatorHelper.isEmail(input) ? await this.userRepo.getUserByEmail(input) : await this.userRepo.getUserByLoginName(input);
+    let user = ValidatorHelper.isEmail(input)
+      ? await this.userRepo.getUserByEmail(input)
+      : await this.userRepo.getUserByLoginName(input);
     if (!user) {
       return next(new HttpException(404, "Account does not exist"));
     }
@@ -73,11 +75,14 @@ export default class AuthController extends BaseController {
     if (!user.isEmailVertify) {
       return next(new HttpException(401, "Email is not vertify"));
     }
-    if(!user.status){
+    if (!user.status) {
       return next(new HttpException(402, "Account is blocked"));
     }
     const token = JWTHelper.generateToken({ userId: user.id }, "ACCESS");
-    const refresh_token = JWTHelper.generateToken({ userId: user.id }, "REFRESH");
+    const refresh_token = JWTHelper.generateToken(
+      { userId: user.id },
+      "REFRESH",
+    );
 
     CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
     CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
@@ -111,7 +116,7 @@ export default class AuthController extends BaseController {
     let isPhoneExist = await this.userRepo.getUserByPhone(phone);
     if (isPhoneExist) {
       return next(new HttpException(400, "Phone number already exists"));
-    } 
+    }
 
     let isLoginNameExist = await this.userRepo.getUserByLoginName(loginName);
     if (isLoginNameExist) {
@@ -119,16 +124,19 @@ export default class AuthController extends BaseController {
     }
 
     user = await this.userRepo.createUser({
-        firstName,
-        lastName,
-        loginName,
-        email,
-        phone,
-        password: hashSync(password, BYCRYPT_SALT),
-      });
-    const vertifyToken = await JWTHelper.generateToken({userId: user.id}, "VERTIFY_EMAIL");
+      firstName,
+      lastName,
+      loginName,
+      email,
+      phone,
+      password: hashSync(password, BYCRYPT_SALT),
+    });
+    const vertifyToken = await JWTHelper.generateToken(
+      { userId: user.id },
+      "VERTIFY_EMAIL",
+    );
     setImmediate(() => {
-      EmailAuthenticatedUser({user: { loginName }, vertifyToken});
+      EmailAuthenticatedUser({ user: { loginName }, vertifyToken });
     });
     response.json({ message: "Successful registration" });
   };
@@ -143,17 +151,25 @@ export default class AuthController extends BaseController {
       return next(new HttpException(404, "Token not found"));
     }
 
-    const payload = JWTHelper.verifyToken(token as string, "VERTIFY_EMAIL") as any;
+    const payload = JWTHelper.verifyToken(
+      token as string,
+      "VERTIFY_EMAIL",
+    ) as any;
     if (!payload) {
       return next(new HttpException(400, "Token is invalid"));
     }
-    
-    const tokenPayload = JWTHelper.decodeToken(token as string) as { userId: number };
+
+    const tokenPayload = JWTHelper.decodeToken(token as string) as {
+      userId: number;
+    };
     const user = await this.userRepo.getUserById(tokenPayload.userId);
-    if(user?.isEmailVertify){
+    if (user?.isEmailVertify) {
       return next(new HttpException(401, "Email is already vertify"));
     }
-    await this.userRepo.updateUser(tokenPayload.userId, { isEmailVertify: true, status: true });
+    await this.userRepo.updateUser(tokenPayload.userId, {
+      isEmailVertify: true,
+      status: true,
+    });
     response.json({ message: "Vertify email successful" });
   };
 
@@ -286,6 +302,38 @@ export default class AuthController extends BaseController {
       return response.json({ token, refresh_token });
     }
   };
+
+  resetToken = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const refreshToken = request.body.refreshToken;
+
+    if (!refreshToken) {
+      return next(new HttpException(400, "Missing refresh token"));
+    }
+    const payload = JWTHelper.verifyToken(refreshToken, "REFRESH");
+
+    if (!payload || !payload.userId) {
+      return next(new HttpException(400, "Invalid refresh token"));
+    }
+    let getUserById = await this.userRepo.getUserById(payload.userId);
+
+    if (!getUserById) {
+      return next(new HttpException(400, "User does not exist"));
+    }
+
+    const token = JWTHelper.generateToken({ userId: getUserById.id }, "ACCESS");
+    const refresh_token = JWTHelper.generateToken(
+      { userId: getUserById.id },
+      "REFRESH",
+    );
+
+    CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
+    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+    response.json({ token, refresh_token });
+  }
 }
 
 type GoogleProfile = {
