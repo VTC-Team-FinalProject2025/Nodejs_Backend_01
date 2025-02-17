@@ -6,12 +6,13 @@
   "scripts": {
     "build": "rimraf dist && tsc",
     "predev": "npm run build",
-    "dev": "cross-env NODE_ENV=development concurrently \"tsc --watch\" \"nodemon -q dist/index.js\"",
+    "dev": "cross-env NODE_ENV=development concurrently \"tsc --watch\" \"npx nodemon\"",
     "prestart": "npm run build",
     "start": "cross-env NODE_ENV=production node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1",
     "deploy": "npx prisma migrate deploy && npm run start",
-    "push": "npx prisma db push"
+    "push": "npx prisma db push",
+    "studio": "npx prisma studio"
   },
   "author": "vtc-team",
   "license": "ISC",
@@ -23,16 +24,21 @@
     "@prisma/client": "^6.3.1",
     "@types/express": "^4.17.13",
     "@types/node": "^17.0.21",
+    "bcrypt": "^5.1.1",
     "cross-env": "^7.0.3",
     "dotenv": "^16.0.0",
     "express": "^4.17.3",
+    "jsonwebtoken": "^9.0.2",
     "prisma": "^6.3.1",
     "rimraf": "^3.0.2",
-    "typescript": "^5.7.3",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1"
+    "swagger-ui-express": "^5.0.1",
+    "typescript": "^5.7.3",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.8",
     "@types/swagger-jsdoc": "^6.0.4",
     "@types/swagger-ui-express": "^4.1.7",
     "concurrently": "^7.0.0",
