@@ -1,5 +1,9 @@
 import * as jwt from "jsonwebtoken";
 import { JWT_SECRET, JWT_SECRET_REFRESH, JWT_SECRET_RESET_PASSWORD } from "../constants";
+interface TokenPayload {
+    userId: number;
+    [key: string]: any;
+}
 
 export interface AuthTokenPayload {
     userId: number;
@@ -18,15 +22,15 @@ const JWT = {
     verifyToken: (token: string, secretType: secretType) => {
         switch (secretType) {
             case "ACCESS":
-                return jwt.verify(token, JWT_SECRET);
+                return jwt.verify(token, JWT_SECRET) as TokenPayload;
             case "VERTIFY_EMAIL":
-                return jwt.verify(token, JWT_SECRET);
+                return jwt.verify(token, JWT_SECRET) as TokenPayload;
             case "REFRESH":
-                return jwt.verify(token, JWT_SECRET_REFRESH);
+                return jwt.verify(token, JWT_SECRET_REFRESH) as TokenPayload;
             case "RESET_PASSWORD":
-                return jwt.verify(token, JWT_SECRET_RESET_PASSWORD);
+                return jwt.verify(token, JWT_SECRET_RESET_PASSWORD) as TokenPayload;
             default:
-                return jwt.verify(token, JWT_SECRET);
+                return jwt.verify(token, JWT_SECRET) as TokenPayload;
         }
     },
     generateToken: (payload: AuthTokenPayload, secretType: secretType) => {
