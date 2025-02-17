@@ -6,9 +6,10 @@ type UserCreateInput = {
     lastName: string;
     loginName: string;
     email: string;
-    phone: string;
+    phone?: string;
     password: string;
     status?: boolean;
+    githubId?: string;
     isEmailVertify?: boolean;
 };
 
@@ -40,6 +41,11 @@ export default class UserRepository {
             where: {
                 email,
             },
+        });
+    }
+    async getUserByGithubId(githubId: string) {
+        return await this.prisma.users.findUnique({
+            where: {githubId: githubId,}
         });
     }
     async getUserByPhone(phone: string) {

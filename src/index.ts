@@ -3,13 +3,14 @@ import App from "./app";
 import AuthController from "./controllers/auth-controller";
 import UserRepository from "./repositories/UserRepository";
 import { PrismaClient } from "@prisma/client";
+import Passport from "./configs/auth/Passport";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
 const prismaClient = new PrismaClient();
 const userRepo = new UserRepository(prismaClient);
 const app = new App([
-    new AuthController(userRepo),
+    new AuthController(userRepo, Passport),
 ], port);
 
 app.listen();
