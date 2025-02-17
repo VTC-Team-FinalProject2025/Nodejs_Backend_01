@@ -25,12 +25,12 @@
  *     LoginInput:
  *       type: object
  *       required:
- *         - email
+ *         - input
  *         - password
  *       properties:
- *         email:
+ *         input:
  *           type: string
- *           description: Email của người dùng
+ *           description: Email của người dùng hoặc tên đăng nhập
  *         password:
  *           type: string
  *           description: Mật khẩu của người dùng
