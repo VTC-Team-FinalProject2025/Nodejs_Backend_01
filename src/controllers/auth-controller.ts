@@ -60,6 +60,20 @@ export default class HeroController extends BaseController {
     }
     const token = GenerateToken({ userId: user.id }, next);
     const refresh_token = GenerateRefreshToken({ userId: user.id }, next);
+
+    response.cookie("token", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 15 * 60 * 1000,
+      sameSite: "strict",
+    });
+
+    response.cookie("refresh_token", refresh_token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      sameSite: "strict",
+    });
     response.json({ token, refresh_token });
   };
 
