@@ -136,7 +136,7 @@ export default class AuthController extends BaseController {
       "VERTIFY_EMAIL",
     );
     setImmediate(() => {
-      EmailAuthenticatedUser({ user: { loginName }, vertifyToken });
+      EmailAuthenticatedUser({ user: { loginName, email }, vertifyToken });
     });
     response.json({ message: "Successful registration" });
   };

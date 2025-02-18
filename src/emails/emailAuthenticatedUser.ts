@@ -2,12 +2,15 @@ import { URL_CLIENT } from '../constants';
 import Mailer from '../helpers/Mailer';
 
 interface Props {
-    user: any;
+    user: {
+        loginName: string,
+        email: string
+    };
     vertifyToken: string
 }
 const EmailAuthenticatedUser = async ({user, vertifyToken}:Props) => {
 
-  const resetUrl = `${URL_CLIENT}/form-status-auth?token=${vertifyToken}&user=${user.name}`;
+  const resetUrl = `${URL_CLIENT}/form-status-auth?token=${vertifyToken}`;
   let htmlContent = `
       <h2>Xác thực tài khoản</h2>
       <p>Xin chào ${user.loginName}</p>
