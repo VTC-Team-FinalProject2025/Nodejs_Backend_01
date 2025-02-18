@@ -303,6 +303,34 @@ export default class AuthController extends BaseController {
     }
   };
 
+  resendEmailVertify = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction
+  ) => {
+    const { email } = request.body;
+    if (!email) {
+      return next(new HttpException(400, "Email not filled in"));
+    } else if (!ValidatorHelper.isEmail(email)) {
+      return next(new HttpException(400, "Not an email address"));
+    }
+    let user = await this.userRepo.getUserByEmail(email);
+    if (!user) {
+      return next(new HttpException(404, "This email does not exist"));
+    }
+    if(user.isEmailVertify){
+      return next(new HttpException(400, "Email is already vertify"));
+    }
+    const vertifyToken = await JWTHelper.generateToken(
+      { userId: user.id },
+      "VERTIFY_EMAIL",
+    );
+    setImmediate(() => {
+      EmailAuthenticatedUser({ user: { loginName: user.loginName, email }, vertifyToken });
+    });
+    response.json({ message: "Successful email person" });
+  }
+
   resetToken = async (
     request: express.Request,
     response: express.Response,

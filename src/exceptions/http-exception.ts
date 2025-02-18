@@ -1,9 +1,16 @@
+type ResponseType = string | { message: string; code: string };
+
 export default class HttpException extends Error {
   status: number;
-  message: string;
-  constructor(status: number, message: string) {
+  response: ResponseType;
+
+  constructor(status: number, response: ResponseType) {
+    const message = typeof response === "string" ? response : response.message;
     super(message);
+
     this.status = status;
-    this.message = message;
+    this.response = response;
+
+    Object.setPrototypeOf(this, HttpException.prototype);
   }
 }
