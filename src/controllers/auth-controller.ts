@@ -54,6 +54,7 @@ export default class AuthController extends BaseController {
       this.passport.authenticate("github", { session: false }),
       this.handleGitHubCallback,
     );
+    this.router.post(this.path + "/resend-verify-email", this.resendEmailVertify);
   }
 
   login = async (
@@ -310,16 +311,16 @@ export default class AuthController extends BaseController {
   ) => {
     const { email } = request.body;
     if (!email) {
-      return next(new HttpException(400, "Email not filled in"));
+      return next(new HttpException(400, {message: "Email not filled in", code: "EMAIL_NOT_FILLED"}));
     } else if (!ValidatorHelper.isEmail(email)) {
-      return next(new HttpException(400, "Not an email address"));
+      return next(new HttpException(400, {message: "Not an email address", code: "NOT_AN_EMAIL"}));
     }
     let user = await this.userRepo.getUserByEmail(email);
     if (!user) {
-      return next(new HttpException(404, "This email does not exist"));
+      return next(new HttpException(404, {message: "This email does not exist", code: "EMAIL_NOT_EXIST"}));
     }
     if(user.isEmailVertify){
-      return next(new HttpException(400, "Email is already vertify"));
+      return next(new HttpException(400, {message: "Email is already vertify", code: "EMAIL_ALREADY_VERTIFY"}));
     }
     const vertifyToken = await JWTHelper.generateToken(
       { userId: user.id },

@@ -242,3 +242,65 @@
  *       500:
  *         description: Lỗi server
  */
+
+/**
+ * @swagger
+ * /auth/resend-verify-email:
+ *   post:
+ *     summary: Gửi lại email xác thực
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 description: email của người dùng cần gửi lại email xác thực
+ *                 example: abcde@gmail.com
+ *     responses:
+ *       200:
+ *         description: Trả về message gửi email thành công
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Successful email person
+ *       400:
+ *        content:
+ *         application/json:
+ *          schema:
+ *              type: object
+ *              properties:
+ *                  message:
+ *                      type: string
+ *                      example: Message của lỗi
+ *                  code:
+ *                      type: string
+ *                      example: MÃ_LỖI
+ *          examples:
+ *               EMAIL_NOT_FILLED:
+ *                   summary: Email không được để trống
+ *                   value:
+ *                       message: Email not filled in
+ *                       code: EMAIL_NOT_FILLED
+ *               NOT_AN_EMAIL:
+ *                   summary: Không đúng định dạng email
+ *                   value:
+ *                       message: Not an email address
+ *                       code: NOT_AN_EMAIL
+ *               EMAIL_ALREADY_VERTIFY:
+ *                   summary: Email đã xác thực trước đó
+ *                   value:
+ *                       message: Email is already vertify
+ *                       code: EMAIL_ALREADY_VERTIFY
+ *       404:
+ *         description: This email does not exist
+ *       500:
+ *         description: Server Internal Error
+ */
