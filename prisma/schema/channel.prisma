@@ -1,0 +1,13 @@
+model Channel {
+  id        Int      @id @default(autoincrement())
+  serverId  Int
+  name      String
+  type      String
+  password  String?
+  createdAt DateTime @default(now())
+
+  Server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  Messages Message[]
+
+  @@map("channel")
+}

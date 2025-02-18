@@ -1,0 +1,12 @@
+model Role {
+  id       Int    @id @default(autoincrement())
+  serverId Int
+  name     String
+  color    String
+
+  Server          Server            @relation("ServerRoles", fields: [serverId], references: [id], onDelete: Cascade)
+  RolePermissions Role_permission[]
+  Server_member   Server_member[]
+
+  @@map("role")
+}
