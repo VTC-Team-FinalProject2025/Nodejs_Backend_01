@@ -1,0 +1,13 @@
+model Direct_message {
+  id         Int       @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  content    String
+  createdAt  DateTime  @default(now())
+  editedAt   DateTime?
+
+  Sender   Users @relation("MessageSender", fields: [senderId], references: [id])
+  Receiver Users @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  @@map("direct_message")
+}

@@ -1,0 +1,15 @@
+model Server {
+  id        Int      @id @default(autoincrement())
+  ownerId   Int
+  name      String
+  iconUrl   String?
+  createdAt DateTime @default(now())
+
+  Members  Server_member[]
+  Channels Channel[]
+  Roles    Role[]          @relation("ServerRoles")
+
+  Owner Users @relation("UserServers", fields: [ownerId], references: [id], onDelete: Cascade)
+
+  @@map("server")
+}

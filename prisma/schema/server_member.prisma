@@ -1,0 +1,14 @@
+model Server_member {
+  id       Int      @id @default(autoincrement())
+  serverId Int
+  userId   Int
+  roleId   Int?
+  joinedAt DateTime @default(now())
+
+  Server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  User   Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Role   Role?  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@unique([serverId, userId])
+  @@map("Server_member")
+}
