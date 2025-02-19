@@ -1,10 +1,15 @@
+enum TypeStatus {
+  meet
+  chat
+}
+
 model Channel {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   serverId  Int
   name      String
-  type      String
+  type      TypeStatus @default(chat)
   password  String?
-  createdAt DateTime @default(now())
+  createdAt DateTime   @default(now())
 
   Server   Server    @relation(fields: [serverId], references: [id], onDelete: Cascade)
   Messages Message[]
