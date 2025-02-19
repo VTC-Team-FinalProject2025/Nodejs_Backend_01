@@ -1,0 +1,19 @@
+enum FriendshipStatus {
+  pending
+  accepted
+  blocked
+}
+
+model Friendship {
+  id         Int              @id @default(autoincrement())
+  senderId   Int
+  receiverId Int
+  status     FriendshipStatus @default(pending)
+  createdAt  DateTime         @default(now())
+
+  sender   Users @relation("SenderToFriendship", fields: [senderId], references: [id])
+  receiver Users @relation("ReceiverToFriendship", fields: [receiverId], references: [id])
+
+  @@unique([senderId, receiverId])
+  @@map("friendships")
+}

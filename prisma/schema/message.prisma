@@ -1,0 +1,12 @@
+model Message {
+  id        Int      @id @default(autoincrement())
+  channelId Int
+  senderId  Int
+  content   String
+  createdAt DateTime @default(now())
+
+  Channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  Sender  Users   @relation("UserMessages", fields: [senderId], references: [id])
+
+  @@map("message")
+}

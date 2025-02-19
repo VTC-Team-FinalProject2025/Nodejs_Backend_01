@@ -1,0 +1,11 @@
+model Role_permission {
+  id           Int @id @default(autoincrement())
+  roleId       Int
+  permissionId Int
+
+  Role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
