@@ -47,6 +47,10 @@ export default class FriendShipController extends BaseController {
     const { userId: senderId } = request.user;
     const { receiverId } = request.body;
 
+    if(senderId ===receiverId) {
+      return next(new HttpException(404, "Can't send friend requests to yourself"));
+    }
+
     const existing = await this.friendShipRepo.existingFriendship(
       senderId as any,
       receiverId,
@@ -148,7 +152,9 @@ export default class FriendShipController extends BaseController {
     const { userId } = request.user;
     const { senderId } = request.body;
 
-    console.log(userId);
+    if(senderId === userId) {
+      return next(new HttpException(404, "Can't send friend requests to yourself"));
+    }
 
     const friendRequest = await this.friendShipRepo.friendRequest({
       senderId,
