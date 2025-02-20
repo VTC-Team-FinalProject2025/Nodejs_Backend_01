@@ -41,7 +41,7 @@ class App {
       swaggerUi.setup(openapiSpecification),
     );
     controllers.forEach((controller) => {
-      this.app.use("/api", controller.router);
+      this.app.use("/api" + controller.path, controller.router);
     });
   }
 

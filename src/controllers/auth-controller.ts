@@ -15,11 +15,11 @@ import UserRepository from "../repositories/UserRepository";
 import { v4 as uuidv4} from "uuid";
 
 export default class AuthController extends BaseController {
-  public path = "/auth";
   public userRepo : UserRepository;
   public passport;
   constructor(userRepo: UserRepository, passport : any) {
     super();
+    this.path = "/auth";
     this.userRepo = userRepo;
     this.passport = passport;
     this.initializeRoutes();

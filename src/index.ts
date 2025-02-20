@@ -4,6 +4,8 @@ import AuthController from "./controllers/auth-controller";
 import UploadController from "./controllers/upload-controller"
 import UserRepository from "./repositories/UserRepository";
 import { PrismaClient } from "@prisma/client";
+import TestController from "./controllers/test-controller";
+import TestController2 from "./controllers/test-controller2";
 import Passport from "./configs/auth/Passport";
 dotenv.config();
 
@@ -12,7 +14,9 @@ const prismaClient = new PrismaClient();
 const userRepo = new UserRepository(prismaClient);
 const app = new App([
     new AuthController(userRepo, Passport),
-    new UploadController()
+    new UploadController(),
+    new TestController2(),
+    new TestController(),
 ], port);
 
 app.listen();
