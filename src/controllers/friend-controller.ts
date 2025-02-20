@@ -82,12 +82,14 @@ export default class FriendShipController extends BaseController {
           OR: [
             {
               senderId: Number(userId),
+              status: "accepted",
               receiver: {
                 loginName: { contains: search, mode: "insensitive" },
               },
             },
             {
               receiverId: Number(userId),
+              status: "accepted",
               sender: { loginName: { contains: search, mode: "insensitive" } },
             },
           ],
