@@ -8,7 +8,7 @@ type FriendShipCreateInput = {
 type FriendShipUpdateInput = {
   senderId?: number;
   receiverId?: number;
-  status: FriendshipStatus;
+  status?: FriendshipStatus;
 };
 
 export default class FriendShipRepository {
@@ -29,6 +29,16 @@ export default class FriendShipRepository {
           { senderId, receiverId },
           { senderId: receiverId, receiverId: senderId },
         ],
+      },
+    });
+  }
+
+  async friendRequest(data: FriendShipUpdateInput) {
+    return await this.prisma.friendship.findFirst({
+      where: {
+        senderId: Number(data.senderId),
+        receiverId: Number(data.receiverId),
+        status: "pending",
       },
     });
   }

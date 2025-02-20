@@ -4,7 +4,10 @@ import paginate from "../helpers/Pagination";
 import authMiddleware from "../middlewares/authentication.middleware";
 import validateSchema from "../middlewares/validateSchema.middleware";
 import FriendShipRepository from "../repositories/FriendRepository";
-import { FriendShipFormSchema } from "../schemas/friendShip";
+import {
+  AcceptFriendFormSchema,
+  FriendShipFormSchema,
+} from "../schemas/friendShip";
 import { BaseController } from "./abstractions/base-controller";
 import express from "express";
 
@@ -26,6 +29,11 @@ export default class FriendShipController extends BaseController {
       this.path + "/make-friend",
       validateSchema(FriendShipFormSchema),
       this.makeFriend,
+    );
+    this.router.put(
+      this.path + "/accept-friend",
+      validateSchema(AcceptFriendFormSchema),
+      this.acceptFriendRequest,
     );
     this.router.get(this.path + "/lists-friend", this.friendsList);
     this.router.get(this.path + "/friend-request-list", this.friendRequestList);
@@ -130,5 +138,31 @@ export default class FriendShipController extends BaseController {
     } catch (error) {
       next(new HttpException(500, "Failed to fetch friend requests"));
     }
+  };
+
+  acceptFriendRequest = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { senderId } = request.body;
+
+    console.log(userId);
+
+    const friendRequest = await this.friendShipRepo.friendRequest({
+      senderId,
+      receiverId: userId,
+    });
+
+    if (!friendRequest) {
+      return next(new HttpException(404, "Friend request not found"));
+    }
+
+    await this.friendShipRepo.updateFriendShipId(friendRequest.id, {
+      status: "accepted",
+    });
+
+    response.json({ message: "Friend request accepted successfully" });
   };
 }
