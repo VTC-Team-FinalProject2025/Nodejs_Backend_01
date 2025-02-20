@@ -28,6 +28,7 @@ export default class FriendShipController extends BaseController {
       this.makeFriend,
     );
     this.router.get(this.path + "/lists-friend", this.friendsList);
+    this.router.get(this.path + "/friend-request-list", this.friendRequestList);
   }
 
   makeFriend = async (
@@ -88,5 +89,46 @@ export default class FriendShipController extends BaseController {
     );
 
     response.json(result);
+  };
+
+  friendRequestList = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { page = 1, limit = 10, search } = request.query;
+
+    try {
+      const filterCondition = search
+        ? {
+            OR: [
+              {
+                receiverId: Number(userId),
+                status: "pending",
+                sender: {
+                  loginName: { contains: search, mode: "insensitive" },
+                },
+              },
+            ],
+          }
+        : { OR: [{ receiverId: Number(userId) }] };
+
+      const includeFields = {
+        sender: { select: { id: true, loginName: true, avatarUrl: true } },
+      };
+
+      const result = await paginate(
+        this.prisma.friendship,
+        Number(page),
+        Number(limit),
+        filterCondition,
+        includeFields,
+      );
+
+      response.json(result);
+    } catch (error) {
+      next(new HttpException(500, "Failed to fetch friend requests"));
+    }
   };
 }
