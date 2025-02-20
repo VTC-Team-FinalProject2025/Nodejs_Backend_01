@@ -35,8 +35,12 @@ export default class FriendShipController extends BaseController {
       validateSchema(AcceptFriendFormSchema),
       this.acceptFriendRequest,
     );
+    this.router.put(this.path + "/block-friend", this.blockFriend);
     this.router.get(this.path + "/lists-friend", this.friendsList);
     this.router.get(this.path + "/friend-request-list", this.friendRequestList);
+    this.router.delete(this.path + "/cancel-friend", this.cancelFriendRequest);
+    this.router.delete(this.path + "/unfriend", this.unFriendRequest);
+    this.router.delete(this.path + "/unblock", this.unblock);
   }
 
   makeFriend = async (
@@ -47,8 +51,10 @@ export default class FriendShipController extends BaseController {
     const { userId: senderId } = request.user;
     const { receiverId } = request.body;
 
-    if(senderId ===receiverId) {
-      return next(new HttpException(404, "Can't send friend requests to yourself"));
+    if (senderId === receiverId) {
+      return next(
+        new HttpException(404, "Can't send friend requests to yourself"),
+      );
     }
 
     const existing = await this.friendShipRepo.existingFriendship(
@@ -152,13 +158,16 @@ export default class FriendShipController extends BaseController {
     const { userId } = request.user;
     const { senderId } = request.body;
 
-    if(senderId === userId) {
-      return next(new HttpException(404, "Can't send friend requests to yourself"));
+    if (senderId === userId) {
+      return next(
+        new HttpException(404, "Can't send friend requests to yourself"),
+      );
     }
 
     const friendRequest = await this.friendShipRepo.friendRequest({
       senderId,
       receiverId: userId,
+      status: "pending",
     });
 
     if (!friendRequest) {
@@ -170,5 +179,123 @@ export default class FriendShipController extends BaseController {
     });
 
     response.json({ message: "Friend request accepted successfully" });
+  };
+
+  cancelFriendRequest = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    try {
+      const { userId } = request.user;
+      const { senderId } = request.body;
+
+      if (senderId === userId) {
+        return next(new HttpException(404, "Cannot send request to yourself"));
+      }
+
+      const friendship = await this.friendShipRepo.friendRequest({
+        senderId,
+        receiverId: userId,
+        status: "pending",
+      });
+
+      if (!friendship) {
+        return next(new HttpException(404, "Friendship not found"));
+      }
+
+      await this.friendShipRepo.deleteFriendship(friendship.id);
+
+      response.json({ message: "Unfriended successfully" });
+    } catch (error) {
+      next(new HttpException(500, "Internal Server Error"));
+    }
+  };
+
+  unFriendRequest = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    try {
+      const { userId } = request.user;
+      const { senderId } = request.body;
+
+      if (senderId === userId) {
+        return next(new HttpException(404, "Cannot send request to yourself"));
+      }
+
+      const friendship = await this.friendShipRepo.findFriendship({
+        senderId,
+        receiverId: userId,
+        status: "accepted",
+      });
+
+      if (!friendship) {
+        return next(new HttpException(404, "Friendship not found"));
+      }
+
+      await this.friendShipRepo.deleteFriendship(friendship.id);
+
+      response.json({ message: "Unfriended successfully" });
+    } catch (error) {
+      next(new HttpException(500, "Internal Server Error"));
+    }
+  };
+
+  blockFriend = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { senderId } = request.body;
+
+    if (senderId === userId) {
+      return next(new HttpException(404, "Cannot send request to yourself"));
+    }
+
+    const friendship = await this.friendShipRepo.findFriendship({
+      senderId,
+      receiverId: userId,
+      status: "accepted",
+    });
+
+    if (!friendship) {
+      return next(new HttpException(404, "Friendship not found"));
+    }
+
+    await this.friendShipRepo.updateFriendShipId(friendship.id, {
+      status: "blocked",
+    });
+
+    response.json({ message: "Unfriend request was successful" });
+  };
+
+  unblock = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { senderId } = request.body;
+
+    if (senderId === userId) {
+      return next(new HttpException(404, "Cannot send request to yourself"));
+    }
+
+    const friendship = await this.friendShipRepo.findFriendship({
+      senderId,
+      receiverId: userId,
+      status: "blocked",
+    });
+
+    if (!friendship) {
+      return next(new HttpException(404, "Friendship not found"));
+    }
+
+    await this.friendShipRepo.deleteFriendship(friendship.id);
+
+    response.json({ message: "Block open successfully" });
   };
 }

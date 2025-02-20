@@ -38,7 +38,26 @@ export default class FriendShipRepository {
       where: {
         senderId: Number(data.senderId),
         receiverId: Number(data.receiverId),
-        status: "pending",
+        status: data.status,
+      },
+    });
+  }
+
+  async findFriendship(data: FriendShipUpdateInput) {
+    return await this.prisma.friendship.findFirst({
+      where: {
+        OR: [
+          {
+            senderId: Number(data.senderId),
+            receiverId: Number(data.receiverId),
+            status: data.status,
+          },
+          {
+            senderId: Number(data.receiverId),
+            receiverId: Number(data.senderId),
+            status: data.status,
+          },
+        ],
       },
     });
   }
@@ -56,6 +75,12 @@ export default class FriendShipRepository {
         id,
       },
       data,
+    });
+  }
+
+  async deleteFriendship(id: number) {
+    return await this.prisma.friendship.delete({
+      where: { id },
     });
   }
 }
