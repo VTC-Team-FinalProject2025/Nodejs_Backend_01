@@ -132,7 +132,7 @@ export default class FriendShipController extends BaseController {
               },
             ],
           }
-        : { OR: [{ receiverId: Number(userId) }] };
+        : { OR: [{ receiverId: Number(userId), status: "pending" }] };
 
       const includeFields = {
         sender: { select: { id: true, loginName: true, avatarUrl: true } },
