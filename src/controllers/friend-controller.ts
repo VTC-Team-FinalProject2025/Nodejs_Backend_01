@@ -10,16 +10,23 @@ import {
 } from "../schemas/friendShip";
 import { BaseController } from "./abstractions/base-controller";
 import express from "express";
+import { Database } from "firebase-admin/database";
 
 export default class FriendShipController extends BaseController {
   public path = "/friend";
   public friendShipRepo: FriendShipRepository;
   public prisma: PrismaClient;
+  public db: Database;
 
-  constructor(friendShipRepo: FriendShipRepository, prisma: PrismaClient) {
+  constructor(
+    friendShipRepo: FriendShipRepository,
+    prisma: PrismaClient,
+    db: Database,
+  ) {
     super();
     this.prisma = prisma;
     this.friendShipRepo = friendShipRepo;
+    this.db = db;
     this.initializeRoutes();
   }
 
@@ -77,6 +84,12 @@ export default class FriendShipController extends BaseController {
   ) => {
     const { userId } = request.user;
     const { page = 1, limit = 10, search } = request.query;
+    const offset = (Number(page) - 1) * Number(limit);
+
+    const onlineUsersSnapshot = await this.db.ref("usersOnline").once("value");
+    const onlineUsers = onlineUsersSnapshot.val() || {};
+    const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
+
     const filterCondition = search
       ? {
           OR: [
@@ -100,15 +113,67 @@ export default class FriendShipController extends BaseController {
       sender: { select: { id: true, loginName: true, avatarUrl: true } },
       receiver: { select: { id: true, loginName: true, avatarUrl: true } },
     };
-    const result = await paginate(
-      this.prisma.friendship,
-      Number(page),
-      Number(limit),
+
+    let onlineFriends = await this.friendShipRepo.getOnlineFriends(
+      onlineUserIds,
       filterCondition,
       includeFields,
+      Number(limit),
+      offset,
     );
 
-    response.json(result);
+    let remainingLimit = Number(limit) - onlineFriends.length;
+    let offlineFriends: any[] = [];
+
+    if (remainingLimit > 0) {
+      offlineFriends = await this.friendShipRepo.getOfflineFriends(
+        onlineUserIds,
+        filterCondition,
+        includeFields,
+        remainingLimit,
+        offset,
+        onlineFriends.length,
+      );
+    }
+
+    const uniqueFriendsMap = new Map();
+    const allFriends = [...onlineFriends, ...offlineFriends]
+      .filter(
+        (friend) =>
+          friend.sender.id === userId || friend.receiver.id === userId,
+      )
+      .forEach((friend) => {
+        const friendData =
+          friend.sender.id === userId ? friend.receiver : friend.sender;
+
+        if (!uniqueFriendsMap.has(friendData.loginName)) {
+          uniqueFriendsMap.set(friendData.loginName, {
+            loginName: friendData.loginName,
+            avatarUrl: friendData.avatarUrl,
+            online: onlineUserIds.has(friendData.id),
+          });
+        }
+      });
+
+    const uniqueFriendsArray = Array.from(uniqueFriendsMap.values());
+
+    const totalFriends = uniqueFriendsArray.length;
+
+    const paginatedFriends = uniqueFriendsArray.slice(
+      offset,
+      offset + Number(limit),
+    );
+
+    response.json({
+      data: paginatedFriends,
+      pagination: {
+        total: totalFriends,
+        page: Number(page),
+        limit: Number(limit),
+        hasNextPage: offset + Number(limit) < totalFriends,
+        hasPrevPage: Number(page) > 1,
+      },
+    });
   };
 
   friendRequestList = async (
