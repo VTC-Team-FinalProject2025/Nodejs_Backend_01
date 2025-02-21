@@ -1,22 +1,22 @@
 import dotenv from "dotenv";
 import App from "./app";
 import AuthController from "./controllers/auth-controller";
-import UploadController from "./controllers/upload-controller"
+import UploadController from "./controllers/upload-controller";
 import UserRepository from "./repositories/UserRepository";
 import { PrismaClient } from "@prisma/client";
-import TestController from "./controllers/test-controller";
-import TestController2 from "./controllers/test-controller2";
 import Passport from "./configs/auth/Passport";
+import FriendShipController from "./controllers/friend-controller";
+import FriendShipRepository from "./repositories/FriendRepository";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
 const prismaClient = new PrismaClient();
 const userRepo = new UserRepository(prismaClient);
-const app = new App([
+const friendShipRepo = new FriendShipRepository(prismaClient);
+const app = new App(
+  [
     new AuthController(userRepo, Passport),
     new UploadController(),
-    new TestController2(),
-    new TestController(),
-], port);
-
+    new FriendShipController(friendShipRepo, prismaClient),
+  ], port);
 app.listen();

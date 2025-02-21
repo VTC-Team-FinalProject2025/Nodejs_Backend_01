@@ -20,8 +20,7 @@ export default class FileController extends BaseController {
   }
 
   public initializeRoutes() {
-    this.router.post(
-      this.path + "/upload",
+    this.router.post("/upload",
       this.upload.single("image"),
       this.uploadFile,
     );

@@ -1,8 +1,8 @@
-import { User } from '@prisma/client'; // Import kiểu User từ Prisma
-declare global {
-    namespace Express {
-        interface Request {
-            user: User;
-        }
+declare namespace Express {
+    export interface Request {
+        user: any;
     }
-}
+    export interface Response {
+        user: any;
+    }
+  }
