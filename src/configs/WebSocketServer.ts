@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { Server as HTTPServer } from "http";
 import { WebSocketController } from "../controllers/websocket/WebSocketController";
+import authWebSocketMiddleware from "../middlewares/authWebSocket.middleware";
 
 class WebSocketServer {
   private io: Server;
@@ -15,7 +16,7 @@ class WebSocketServer {
         credentials: true, 
       },
     });
-
+    this.io.use(authWebSocketMiddleware); 
     this.controller = new WebSocketController(this.io);
   }
 

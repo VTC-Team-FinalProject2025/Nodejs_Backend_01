@@ -10,7 +10,7 @@ export class WebSocketController {
 
   private setupSocketEvents() {
     this.io.on("connection", (socket: Socket) => {
-      console.log(`🔗 Client connected: ${socket.id}`);
+      console.log(`🔗 Client connected: ${socket.data.userId}`);
 
       socket.on("message", (message) => this.handleMessage(socket, message));
 
@@ -19,7 +19,8 @@ export class WebSocketController {
   }
 
   private handleMessage(socket: Socket, message: string) {
-    console.log(`📩 Received: ${message}`);
+    console.log(`📩 Received from ${socket.id}: ${message}`);
+
     this.io.emit("response", { from: socket.id, message });
   }
 
