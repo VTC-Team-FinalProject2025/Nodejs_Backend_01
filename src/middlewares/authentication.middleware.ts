@@ -9,16 +9,22 @@ export default function authMiddleware(
 ) {
     const { authorization } = request.headers;
     let tokenPayload;
-    if (authorization && authorization.includes('Bearer')) {
-        let token = authorization.trim().split(' ')[1];
-        tokenPayload = JWTHelper.verifyToken(token, "ACCESS");
-        request.user = tokenPayload;
-        return next();
-    } else if(authorization){
-        let token = authorization.trim();
-        tokenPayload = JWTHelper.verifyToken(token, "ACCESS")
-        request.user = tokenPayload;
-        return next();
+    try{
+        if (authorization && (authorization.includes('Bearer') || authorization.includes('bearer'))) {
+            let token = authorization.trim().split(' ')[1];
+            tokenPayload = JWTHelper.verifyToken(token, "ACCESS");
+            request.user = tokenPayload;
+            return next();
+        } else if(authorization){
+            let token = authorization.trim();
+            tokenPayload = JWTHelper.verifyToken(token, "ACCESS");
+            request.user = tokenPayload;
+            return next();
+        }
+        return next(new HttpException(401, "Unauthorized"));
+    } catch (error) {
+        return next(new HttpException(401, "Unauthorized"));
     }
-    return next(new HttpException(401, "Unauthorized"));
 }
+
+export const AuthMiddleware = authMiddleware;

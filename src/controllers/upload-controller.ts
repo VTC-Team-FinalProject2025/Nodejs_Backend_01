@@ -5,7 +5,6 @@ import FileUploadException from "../exceptions/file-upload-exception";
 import multer from "multer";
 
 export default class FileController extends BaseController {
-  public path = "/files";
   private fileRepository: FileRepository;
 
   private upload = multer({
@@ -15,13 +14,13 @@ export default class FileController extends BaseController {
 
   constructor() {
     super();
+    this.path = "/files";
     this.fileRepository = new FileRepository();
     this.initializeRoutes();
   }
 
   public initializeRoutes() {
-    this.router.post(
-      this.path + "/upload",
+    this.router.post("/upload",
       this.upload.single("image"),
       this.uploadFile,
     );

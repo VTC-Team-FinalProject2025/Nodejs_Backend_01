@@ -3,6 +3,7 @@ import { PrismaClient, FriendshipStatus } from "@prisma/client";
 type FriendShipCreateInput = {
   senderId: number;
   receiverId: number;
+  status?: FriendshipStatus;
 };
 
 type FriendShipUpdateInput = {

@@ -13,7 +13,6 @@ import express from "express";
 import { Database } from "firebase-admin/database";
 
 export default class FriendShipController extends BaseController {
-  public path = "/friend";
   public friendShipRepo: FriendShipRepository;
   public prisma: PrismaClient;
   public db: Database;
@@ -24,6 +23,7 @@ export default class FriendShipController extends BaseController {
     db: Database,
   ) {
     super();
+    this.path = "/friend";
     this.prisma = prisma;
     this.friendShipRepo = friendShipRepo;
     this.db = db;
@@ -33,21 +33,21 @@ export default class FriendShipController extends BaseController {
   public initializeRoutes() {
     this.router.use(authMiddleware);
     this.router.post(
-      this.path + "/make-friend",
+      "/make-friend",
       validateSchema(FriendShipFormSchema),
       this.makeFriend,
     );
     this.router.put(
-      this.path + "/accept-friend",
+      "/accept-friend",
       validateSchema(AcceptFriendFormSchema),
       this.acceptFriendRequest,
     );
-    this.router.put(this.path + "/block-friend", this.blockFriend);
-    this.router.get(this.path + "/lists-friend", this.friendsList);
-    this.router.get(this.path + "/friend-request-list", this.friendRequestList);
-    this.router.delete(this.path + "/cancel-friend", this.cancelFriendRequest);
-    this.router.delete(this.path + "/unfriend", this.unFriendRequest);
-    this.router.delete(this.path + "/unblock", this.unblock);
+    this.router.put("/block-friend", this.blockFriend);
+    this.router.get("/lists-friend", this.friendsList);
+    this.router.get("/friend-request-list", this.friendRequestList);
+    this.router.delete("/cancel-friend", this.cancelFriendRequest);
+    this.router.delete("/unfriend", this.unFriendRequest);
+    this.router.delete("/unblock", this.unblock);
   }
 
   makeFriend = async (
@@ -261,11 +261,15 @@ export default class FriendShipController extends BaseController {
         return next(new HttpException(404, "Cannot send request to yourself"));
       }
 
-      const friendship = await this.friendShipRepo.friendRequest({
+      const friendship = (await this.friendShipRepo.friendRequest({
         senderId,
         receiverId: userId,
         status: "pending",
-      });
+      })) ? null : (await this.friendShipRepo.friendRequest({
+        senderId: userId,
+        receiverId: senderId,
+        status: "pending",
+      }));
 
       if (!friendship) {
         return next(new HttpException(404, "Friendship not found"));
@@ -273,7 +277,7 @@ export default class FriendShipController extends BaseController {
 
       await this.friendShipRepo.deleteFriendship(friendship.id);
 
-      response.json({ message: "Unfriended successfully" });
+      response.json({ message: "Canceled request friend successfully" });
     } catch (error) {
       next(new HttpException(500, "Internal Server Error"));
     }
@@ -325,18 +329,20 @@ export default class FriendShipController extends BaseController {
     const friendship = await this.friendShipRepo.findFriendship({
       senderId,
       receiverId: userId,
-      status: "accepted",
     });
 
     if (!friendship) {
-      return next(new HttpException(404, "Friendship not found"));
+      this.friendShipRepo.createFriendShip({ senderId: userId, receiverId: senderId, status: "blocked" });
+      return response.json({ message: "Blocked friend request was successful" });
     }
 
     await this.friendShipRepo.updateFriendShipId(friendship.id, {
+      senderId: userId,
+      receiverId: senderId,
       status: "blocked",
     });
 
-    response.json({ message: "Unfriend request was successful" });
+    response.json({ message: "Blocked friend request was successful" });
   };
 
   unblock = async (
@@ -352,8 +358,8 @@ export default class FriendShipController extends BaseController {
     }
 
     const friendship = await this.friendShipRepo.findFriendship({
-      senderId,
-      receiverId: userId,
+      senderId: userId,
+      receiverId: senderId,
       status: "blocked",
     });
 

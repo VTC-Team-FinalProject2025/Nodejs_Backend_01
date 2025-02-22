@@ -34,46 +34,45 @@ type GitHubProfile = {
 }
 
 export default class AuthController extends BaseController {
-  public path = "/auth";
   public userRepo : UserRepository;
   public passport;
   constructor(userRepo: UserRepository, passport : any) {
     super();
+    this.path = "/auth";
     this.userRepo = userRepo;
     this.passport = passport;
     this.initializeRoutes();
   }
 
   public initializeRoutes() {
-    this.router.post(
-      this.path + "/login",
+    this.router.post("/login",
       ValidateSchema(LoginFormSchema),
       this.login,
     );
     this.router.post(
-      this.path + "/signup",
+      "/signup",
       ValidateSchema(SignupFormSchema),
       this.signup,
     );
-    this.router.post(this.path + "/verify-email", this.vertifyEmail);
-    this.router.post(this.path + "/logout", this.logout);
-    this.router.post(this.path + "/forgot-password", this.forgotPassword);
-    this.router.post(this.path + "/reset-password", ValidateSchema(ForgetPasswordFormSchema), this.resetPassword);
-    this.router.post(this.path + "/refresh-token", this.resetToken);
-    this.router.get(this.path + "/google", this.passport.authenticate("google", { scope: ["profile", "email"] }));
+    this.router.post("/verify-email", this.vertifyEmail);
+    this.router.post("/logout", this.logout);
+    this.router.post("/forgot-password", this.forgotPassword);
+    this.router.post("/reset-password", ValidateSchema(ForgetPasswordFormSchema), this.resetPassword);
+    this.router.post("/refresh-token", this.resetToken);
+    this.router.get("/google", this.passport.authenticate("google", { scope: ["profile", "email"] }));
     this.router.get(
-      this.path + "/google/callback",
+      "/google/callback",
       this.passport.authenticate("google", { session: false }),
       this.handleGoogleCallback,
     );
 
-    this.router.get(this.path + "/github", this.passport.authenticate("github", { scope: ["user:email"] }));
+    this.router.get("/github", this.passport.authenticate("github", { scope: ["user:email"] }));
     this.router.get(
-      this.path + "/github/callback",
+      "/github/callback",
       this.passport.authenticate("github", { session: false }),
       this.handleGitHubCallback,
     );
-    this.router.post(this.path + "/resend-verify-email", this.resendEmailVertify);
+    this.router.post("/resend-verify-email", this.resendEmailVertify);
   }
 
   login = async (
