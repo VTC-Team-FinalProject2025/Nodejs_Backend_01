@@ -8,7 +8,7 @@ model Server {
   Members  Server_member[]
   Channels Channel[]
   Roles    Role[]          @relation("ServerRoles")
-
+  InviteLink InviteLink?    @relation("ServerInviteLink")
   Owner Users @relation("UserServers", fields: [ownerId], references: [id], onDelete: Cascade)
 
   @@map("server")

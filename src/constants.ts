@@ -19,3 +19,4 @@ export const CookieKeys = {
     ACCESS_TOKEN: "token",
     REFRESH: "refresh_token"
 }
+export const DEFAULT_SERVER_ICON = "https://robohash.org/adad";
