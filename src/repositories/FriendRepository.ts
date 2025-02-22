@@ -95,6 +95,7 @@ export default class FriendShipRepository {
     return await this.prisma.friendship.findMany({
       where: {
         ...filterCondition,
+        status: "accepted",
         OR: [
           { senderId: { notIn: Array.from(onlineUserIds) } },
           { receiverId: { notIn: Array.from(onlineUserIds) } },
@@ -116,6 +117,7 @@ export default class FriendShipRepository {
     return await this.prisma.friendship.findMany({
       where: {
         ...filterCondition,
+        status: "accepted",
         OR: [
           { senderId: { in: Array.from(onlineUserIds) } },
           { receiverId: { in: Array.from(onlineUserIds) } },
