@@ -84,4 +84,49 @@ export default class FriendShipRepository {
       where: { id },
     });
   }
+
+  async getOfflineFriends(
+    onlineUserIds: Set<number>,
+    filterCondition: any,
+    includeFields: any,
+    remainingLimit: number,
+    offset: number,
+    onlineFriendsCount: number
+  ) {
+    return await this.prisma.friendship.findMany({
+      where: {
+        ...filterCondition,
+        status: "accepted",
+        OR: [
+          { senderId: { notIn: Array.from(onlineUserIds) } },
+          { receiverId: { notIn: Array.from(onlineUserIds) } },
+        ],
+      },
+      include: includeFields,
+      take: remainingLimit,
+      skip: Math.max(0, offset - onlineFriendsCount)
+    });
+  }
+
+  async getOnlineFriends(
+    onlineUserIds: Set<number>,
+    filterCondition: any,
+    includeFields: any,
+    limit: number,
+    offset: number
+  ) {
+    return await this.prisma.friendship.findMany({
+      where: {
+        ...filterCondition,
+        status: "accepted",
+        OR: [
+          { senderId: { in: Array.from(onlineUserIds) } },
+          { receiverId: { in: Array.from(onlineUserIds) } },
+        ],
+      },
+      include: includeFields,
+      take: limit,
+      skip: offset,
+    });
+  }
 }

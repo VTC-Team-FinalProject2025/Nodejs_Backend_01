@@ -8,8 +8,10 @@ import { PrismaClient } from "@prisma/client";
 import Passport from "./configs/auth/Passport";
 import FriendShipController from "./controllers/friend-controller";
 import FriendShipRepository from "./repositories/FriendRepository";
+
 import ServerRepository from "./repositories/serverRepository";
 import ChannelRepository from "./repositories/channelRepository";
+import { db } from "./configs/firebase";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -22,7 +24,8 @@ const app = new App(
   [
     new AuthController(userRepo, Passport),
     new UploadController(),
-    new FriendShipController(friendShipRepo, prismaClient),
+    new FriendShipController(friendShipRepo, prismaClient, db),
     new ServerController(serverRepo, channelRepo, prismaClient),
   ], port);
+
 app.listen();
