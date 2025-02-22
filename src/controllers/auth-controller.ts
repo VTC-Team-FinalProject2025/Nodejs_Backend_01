@@ -14,6 +14,25 @@ import EmailAuthenticatedUser from "../emails/emailAuthenticatedUser";
 import UserRepository from "../repositories/UserRepository";
 import { v4 as uuidv4} from "uuid";
 
+type GoogleProfile = {
+  id: string,
+  name: {
+    familyName: string,
+    givenName: string,
+  },
+  emails: {value: string, verified: boolean}[],
+  photos: {value: string}[],
+}
+
+type GitHubProfile = {
+  id: string,
+  displayName: string,
+  username: string,
+  profileUrl: string,
+  photos: {value: string}[],
+  email: string,
+}
+
 export default class AuthController extends BaseController {
   public path = "/auth";
   public userRepo : UserRepository;
@@ -365,21 +384,3 @@ export default class AuthController extends BaseController {
   }
 }
 
-type GoogleProfile = {
-  id: string,
-  name: {
-    familyName: string,
-    givenName: string,
-  },
-  emails: {value: string, verified: boolean}[],
-  photos: {value: string}[],
-}
-
-type GitHubProfile = {
-  id: string,
-  displayName: string,
-  username: string,
-  profileUrl: string,
-  photos: {value: string}[],
-  email: string,
-}
