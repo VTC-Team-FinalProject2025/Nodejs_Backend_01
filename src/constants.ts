@@ -14,6 +14,7 @@ export const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET!;
 export const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID!;
 export const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET!;
 export const DB_FIREBASE = process.env.DB_FIREBASE!;
+export const REDIS_URI = process.env.REDIS_URI!;
 export const CookieKeys = {
     ACCESS_TOKEN: "token",
     REFRESH: "refresh_token"
