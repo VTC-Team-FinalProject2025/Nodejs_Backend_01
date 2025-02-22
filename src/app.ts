@@ -1,24 +1,31 @@
 import express from "express";
-import cookieParser from 'cookie-parser';
-import cors from 'cors';
+import cookieParser from "cookie-parser";
+import cors from "cors";
 import { BaseController } from "./controllers/abstractions/base-controller";
 import errorMiddleware from "./middlewares/error.middleware";
 import swaggerUi from "swagger-ui-express";
 import { openapiSpecification } from "./configs/setUpSwagger";
 import Passport from "./configs/auth/Passport";
+import { createServer, Server as HTTPServer } from "http";
+import WebSocketServer from "./configs/WebSocketServer";
 
 class App {
   public app: express.Application;
   public port: number | string;
+  private httpServer: HTTPServer;
+  private websocketServer: WebSocketServer;
 
   constructor(controllers: BaseController[], port: number | string) {
     this.app = express();
     this.port = port;
+    this.httpServer = createServer(this.app);
 
     this.initializeMiddlewares();
     this.initializePassport();
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
+
+    this.websocketServer = new WebSocketServer(this.httpServer);
   }
 
   private initializeMiddlewares() {
@@ -51,9 +58,13 @@ class App {
   }
 
   public listen() {
-    this.app.listen(this.port, () => {
-      console.log(`App listening on the port ${this.port}`);
+    this.httpServer.listen(this.port, () => {
+      console.log(`🚀 Server listening on port ${this.port}`);
     });
+  }
+
+  public getWebSocketServer(): WebSocketServer {
+    return this.websocketServer;
   }
 }
 
