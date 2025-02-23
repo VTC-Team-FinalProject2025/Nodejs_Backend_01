@@ -5,42 +5,73 @@ import { BaseController } from "./abstractions/base-controller";
 import { NextFunction, Request, Response } from "express";
 import ChannelRepository from "../repositories/channelRepository";
 import HttpException from "../exceptions/http-exception";
+import { FileRepository } from "../repositories/fileRepository";
+import multer from "multer";
+import { DEFAULT_SERVER_ICON } from "../constants";
+import validateSchema from "../middlewares/validateSchema.middleware";
+import { InviteLinkSchema } from "../schemas/server";
 
 export default class FileController extends BaseController {
   private serverRepo: ServerRepository;
-  private prisma: PrismaClient;
   private channelRepo: ChannelRepository;
+  private fileRepository: FileRepository;
+  private upload = multer({
+      storage: multer.memoryStorage(),
+      limits: { fileSize: 5 * 1024 * 1024 },
+    });
 
   constructor(serverRepo: ServerRepository, channelRepo: ChannelRepository, prisma: PrismaClient) {
     super();
     this.serverRepo = serverRepo;
     this.channelRepo = channelRepo;
-    this.prisma = prisma;
+    this.fileRepository = new FileRepository();
     this.path = "/servers";
     this.initializeRoutes();
   }
 
   public initializeRoutes() {
     this.router.use(authMiddleware);
-    this.router.post(`/`, this.createServer);
+    this.router.post(`/`, this.upload.single("icon"), this.createServer);
     this.router.get(`/:id`, this.getServerById);
     this.router.get(`/`, this.getServers);
-    this.router.put(`/:id`, this.updateServer);
+    this.router.put(`/:id`, this.upload.single("icon"), this.updateServer);
     this.router.delete(`/:id`, this.deleteServer);
+    this.router.post(`/join`, this.joinServer);
+    this.router.post(`/leave/:id`, this.leaveServer);
+    this.router.post(`/invite-token`, validateSchema(InviteLinkSchema), this.createInviteLink);
   }
 
   private createServer = async (req: Request, res: Response, next: NextFunction) => {
     const { name } = req.body;
     const ownerId = req.user.userId;
-    try {
-      const server = await this.serverRepo.createServer(name, ownerId);
-      if(!server){
-        return next(new HttpException(400, "Failed to create server"));
-      };
-      res.status(201).json(server);
-    } catch (error) {
-      next(new HttpException(500, "Internal server error"));
+    if(name && ((name.length < 1) || (name.length > 255))){
+      return next(new HttpException(400, "Server name should be between 1 and 255 characters"));
     }
+    let server;
+    if(!req.file){
+      try {
+        server = await this.serverRepo.createServer(name, ownerId, DEFAULT_SERVER_ICON);
+        return res.status(201).json(server);
+      } catch (error) {
+        return next(new HttpException(500, "Internal server error"));
+      }
+    }
+
+    if(req.file) await this.fileRepository.uploadImage(req.file, "servers").then(async (url) => {
+      try {
+        server = await this.serverRepo.createServer(name, ownerId, url);
+        res.status(201).json(server);
+      } catch (error) {
+        next(new HttpException(500, "Internal server error"));  
+      }
+    }).catch(async (error) => {
+      next(new HttpException(400, error))
+    })
+
+    if(!server){
+      return next(new HttpException(400, "Failed to create server"));
+    };
+    
   };
 
   private getServerById = async (req: Request, res: Response, next: NextFunction) => {
@@ -81,8 +112,22 @@ export default class FileController extends BaseController {
         if(server.ownerId !== req.user.userId){
             return next(new HttpException(403, "You are not the owner of this server"));
         };
-        const updatedServer = await this.serverRepo.updateServer(Number(id), name);
-        res.status(200).json(updatedServer);
+
+        if(name && ((name.length < 1) || (name.length > 255))){
+          return next(new HttpException(400, "Server name should be between 1 and 255 characters"));
+        }
+
+        if(!req.file){
+          const updatedServer = await this.serverRepo.updateServer(Number(id), name);
+          return res.status(200).json(updatedServer);
+        }
+        
+        if(req.file) await this.fileRepository.uploadImage(req.file, "servers").then(async (url) => {
+          const updatedServer = await this.serverRepo.updateServer(Number(id), name, url);
+          return res.status(200).json(updatedServer);
+        }).catch(async (error) => {
+          next(new HttpException(400, error))
+        })
     } catch (error) {
         next(new HttpException(500, "Failed to update server"));
     }
@@ -103,6 +148,69 @@ export default class FileController extends BaseController {
         res.status(200).json({ message: "Server deleted successfully" });
     } catch (error) {
         next(new HttpException(500, "Failed to delete server"));
+    }
+  };
+
+  private joinServer = async (req: Request, res: Response, next: NextFunction) => {
+    const { token } = req.body;
+    const { userId } = req.user;
+    try {
+        const server = await this.serverRepo.getServerByInviteToken(token);
+        if (!server) {
+            return next(new HttpException(400, "Token is invalid"));
+        }
+        if(!server.InviteLink){
+            return next(new HttpException(400, "Server does not have an invite link"));
+        }
+        let member;
+        try{
+          member = await this.serverRepo.joinServer({userId, serverId: server.id});
+        } catch (error: any) {
+          return next(new HttpException(400, error.message));
+        }
+        
+        res.status(200).json(member);
+    } catch (error) {
+        next(new HttpException(500, "Internal server error"));
+    }
+  };
+
+  private leaveServer = async (req: Request, res: Response, next: NextFunction) => {
+    const { id } = req.params;
+    const { userId } = req.user;
+    try {
+        const server = await this.serverRepo.getServerById(Number(id));
+        if (!server) {
+            return next(new HttpException(404, "Server not found"));
+        }
+        if(server.ownerId === userId){
+            return next(new HttpException(403, "Owner cannot leave server"));
+        }
+        await this.serverRepo.leaveServer(userId, Number(id));
+        res.status(200).json({ message: "Left server successfully" });
+    } catch (error) {
+        next(new HttpException(500, "Failed to leave server"));
+    }
+  };
+
+  private createInviteLink = async (req: Request, res: Response, next: NextFunction) => {
+    const { serverId, count, expireIn } = req.body;
+    try {
+        const server = await this.serverRepo.getServerById(serverId);
+        if (!server) {
+            return next(new HttpException(404, "Server not found"));
+        }
+        if(server.ownerId !== req.user.userId){
+            return next(new HttpException(403, "You are not the owner of this server"));
+        }
+        const inviteLinkBefore = await this.serverRepo.getInviteToken(serverId);
+        if(inviteLinkBefore){
+            await this.serverRepo.deleteInviteToken(serverId);
+        }
+        const inviteLink = await this.serverRepo.generateInviteToken({serverId, count, expireIn});
+        res.status(200).json(inviteLink);
+    } catch (error) {
+        next(new HttpException(500, "Failed to create invite link"));
     }
   };
 } 
