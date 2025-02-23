@@ -6,7 +6,7 @@ import JWTHelper from "../helpers/JWT";
 import ValidateSchema from "../middlewares/validateSchema.middleware";
 import { SignupFormSchema, LoginFormSchema, ForgetPasswordFormSchema } from "../schemas/auth";
 import SendEmailResetPassword from "../emails/emailForgotPassword.email";
-import { CookieKeys } from "../constants";
+import { CookieKeys, URL_CLIENT } from "../constants";
 import CookieHelper from "../helpers/Cookie";
 import ValidatorHelper from "../helpers/Validator";
 import { BYCRYPT_SALT } from "../constants";
@@ -266,7 +266,6 @@ export default class AuthController extends BaseController {
       const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
       CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
       CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
-      return response.json({ token, refresh_token });
     } else {
       let userCreate = await this.userRepo.createUser({
         firstName: user.name.givenName,
@@ -282,8 +281,8 @@ export default class AuthController extends BaseController {
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
       CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
       CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
-      return response.json({ token, refresh_token });
     }
+    return response.redirect(URL_CLIENT);
   };
 
   handleGitHubCallback = async (
@@ -299,7 +298,6 @@ export default class AuthController extends BaseController {
       const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
       CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
       CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
-      return response.json({ token, refresh_token });
     } else {
       if((await this.userRepo.getUserByEmail(user.email.split("@")[0] + "+vtcapp" + user.email.split("@")[1]))){
         return next(new HttpException(400, "Email already existed"));
@@ -318,8 +316,8 @@ export default class AuthController extends BaseController {
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
       CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
       CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
-      return response.json({ token, refresh_token });
     }
+    return response.redirect(URL_CLIENT);
   };
 
   resendEmailVertify = async (
