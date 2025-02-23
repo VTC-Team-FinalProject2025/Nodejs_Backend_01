@@ -8,6 +8,7 @@ import { openapiSpecification } from "./configs/setUpSwagger";
 import Passport from "./configs/auth/Passport";
 import { createServer, Server as HTTPServer } from "http";
 import WebSocketServer from "./configs/WebSocketServer";
+import { URL_CLIENT } from "./constants";
 
 class App {
   public app: express.Application;
@@ -30,7 +31,12 @@ class App {
 
   private initializeMiddlewares() {
     this.app.use(cookieParser());
-    this.app.use(cors());
+    this.app.use(cors(
+      {
+        origin: URL_CLIENT, // Domain frontend
+        credentials: true, // Cho phép gửi cookie và header Authorization
+      }
+    ));
     this.app.use(express.json());
   }
 

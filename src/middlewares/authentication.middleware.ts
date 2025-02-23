@@ -20,6 +20,11 @@ export default function authMiddleware(
             tokenPayload = JWTHelper.verifyToken(token, "ACCESS");
             request.user = tokenPayload;
             return next();
+        } else if(request.cookies.token) {
+            console.log(request.cookies?.token);
+            tokenPayload = JWTHelper.verifyToken(request.cookies.token, "ACCESS");
+            request.user = tokenPayload;
+            return next();
         }
         return next(new HttpException(401, "Unauthorized"));
     } catch (error) {
