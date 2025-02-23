@@ -8,6 +8,5 @@ model Message {
   Channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   Sender  Users   @relation("UserMessages", fields: [senderId], references: [id])
 
-  @@unique([createdAt, id])
   @@map("message")
 }

@@ -1,0 +1,13 @@
+model InviteLink {
+  id        Int      @id @default(autoincrement())
+  serverId  Int      @unique
+  token     String   @unique
+  count     Int
+  createdAt DateTime @default(now())
+  expireAt  DateTime
+
+  // Relations
+  Server    Server   @relation("ServerInviteLink", fields: [serverId], references: [id])
+
+  @@index([serverId])
+}
