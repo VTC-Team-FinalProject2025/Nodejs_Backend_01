@@ -12,6 +12,7 @@ import FriendShipRepository from "./repositories/FriendRepository";
 import ServerRepository from "./repositories/serverRepository";
 import ChannelRepository from "./repositories/channelRepository";
 import { db } from "./configs/firebase";
+import ChannelController from "./controllers/channel-controller";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -26,6 +27,7 @@ const app = new App(
     new UploadController(),
     new FriendShipController(friendShipRepo, prismaClient, db),
     new ServerController(serverRepo, channelRepo, prismaClient),
+    new ChannelController(channelRepo, serverRepo),
   ], port);
 
 app.listen();
