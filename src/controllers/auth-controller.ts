@@ -102,9 +102,7 @@ export default class AuthController extends BaseController {
       { userId: user.id },
       "REFRESH",
     );
-
-    CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+    this.setTokenIntoCookie(token, refresh_token, response, user);
     response.json({ token, refresh_token });
   };
 
@@ -264,8 +262,7 @@ export default class AuthController extends BaseController {
     if(userExisted){
       const token = JWTHelper.generateToken({ userId: userExisted.id }, "ACCESS");
       const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
-      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      this.setTokenIntoCookie(token, refresh_token, response, userExisted);
     } else {
       let userCreate = await this.userRepo.createUser({
         firstName: user.name.givenName,
@@ -279,10 +276,9 @@ export default class AuthController extends BaseController {
       });
       const token = JWTHelper.generateToken({ userId: userCreate.id }, "ACCESS");
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
-      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      this.setTokenIntoCookie(token, refresh_token, response, userCreate);
     }
-    return response.redirect(URL_CLIENT);
+    return response.redirect(URL_CLIENT+'/me');
   };
 
   handleGitHubCallback = async (
@@ -296,8 +292,8 @@ export default class AuthController extends BaseController {
       const token
         = JWTHelper.generateToken({ userId: userExisted.id }, "ACCESS");
       const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
-      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      this.setTokenIntoCookie(token, refresh_token, response, userExisted);
+
     } else {
       if((await this.userRepo.getUserByEmail(user.email.split("@")[0] + "+vtcapp" + user.email.split("@")[1]))){
         return next(new HttpException(400, "Email already existed"));
@@ -314,10 +310,9 @@ export default class AuthController extends BaseController {
       });
       const token = JWTHelper.generateToken({ userId: userCreate.id }, "ACCESS");
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
-      CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-      CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+      this.setTokenIntoCookie(token, refresh_token, response, userCreate);
     }
-    return response.redirect(URL_CLIENT);
+    return response.redirect(URL_CLIENT+"/me");
   };
 
   resendEmailVertify = async (
@@ -374,10 +369,18 @@ export default class AuthController extends BaseController {
       { userId: getUserById.id },
       "REFRESH",
     );
-
-    CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response);
+    this.setTokenIntoCookie(token, refresh_token, response, getUserById);
     response.json({ token, refresh_token });
+  }
+  setTokenIntoCookie = (token: string, refresh_token: string, response: express.Response, user: any) => {
+    CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
+    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response, {httpOnly: true, maxAge: 7 * 24* 60 * 60 * 1000});
+    CookieHelper.setCookie(
+      CookieKeys.USER_INFO,
+      JSON.stringify({ userId: user.id, avatarUrl: user.avatarUrl, loginName: user.loginName, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone }),
+      response,
+      {httpOnly: false, maxAge: 15 * 60 * 1000}
+    );
   }
 }
 
