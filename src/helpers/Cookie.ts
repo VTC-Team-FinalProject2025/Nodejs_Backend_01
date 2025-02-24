@@ -1,13 +1,15 @@
 import express from "express";
 import { CookieKeys } from "../constants";
 const Cookie = {
-    setCookie: (key: string, value: string, response: express.Response) => {
+    setCookie: (key: string, value: string, response: express.Response, options = {
+        httpOnly: true,
+        maxAge: 15 * 60 * 1000,
+    }) => {
         response.cookie(key, value, {
-            httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
-            maxAge: 15 * 60 * 1000,
             sameSite: "strict",
             path: "/",
+            secure: process.env.NODE_ENV === "production",
+            ...options
         });
     },
     clearCookie: (key: string, response: express.Response) => {

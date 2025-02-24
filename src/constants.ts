@@ -17,6 +17,7 @@ export const DB_FIREBASE = process.env.DB_FIREBASE!;
 export const REDIS_URI = process.env.REDIS_URI!;
 export const CookieKeys = {
     ACCESS_TOKEN: "token",
-    REFRESH: "refresh_token"
+    REFRESH: "refresh_token",
+    USER_INFO: "user_info",
 }
 export const DEFAULT_SERVER_ICON = "https://robohash.org/adad";
