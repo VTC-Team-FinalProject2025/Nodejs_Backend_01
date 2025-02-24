@@ -6,7 +6,7 @@ const Cookie = {
         maxAge: 15 * 60 * 1000,
     }) => {
         response.cookie(key, value, {
-            sameSite: "strict",
+            sameSite: 'lax', 
             path: "/",
             secure: process.env.NODE_ENV === "production",
             ...options
@@ -16,7 +16,7 @@ const Cookie = {
         response.clearCookie(key, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
-            sameSite: "strict",
+            sameSite: "lax",
         });
     },
     clearAllCookies: (response: express.Response) => {
