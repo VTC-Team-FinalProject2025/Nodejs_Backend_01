@@ -148,6 +148,7 @@ export default class FriendShipController extends BaseController {
 
         if (!uniqueFriendsMap.has(friendData.loginName)) {
           uniqueFriendsMap.set(friendData.loginName, {
+            id: friendData.id,
             loginName: friendData.loginName,
             avatarUrl: friendData.avatarUrl,
             online: onlineUserIds.has(friendData.id),
