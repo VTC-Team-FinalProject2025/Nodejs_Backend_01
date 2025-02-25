@@ -319,7 +319,16 @@ export default class FriendShipController extends BaseController {
         includeFields,
       );
 
-      response.json(result);
+      const formattedData = result.data.map((friendship: any) => ({
+        id: friendship.sender.id,
+        loginName: friendship.sender.loginName,
+        avatarUrl: friendship.sender.avatarUrl,
+      }));
+
+      response.json({
+        data: formattedData,
+        pagination: result.pagination,
+      });
     } catch (error) {
       next(new HttpException(500, "Failed to fetch friend requests"));
     }
@@ -360,7 +369,16 @@ export default class FriendShipController extends BaseController {
         includeFields,
       );
 
-      response.json(result);
+      const formattedData = result.data.map((friendship: any) => ({
+        id: friendship.sender.id,
+        loginName: friendship.sender.loginName,
+        avatarUrl: friendship.sender.avatarUrl,
+      }));
+
+      response.json({
+        data: formattedData,
+        pagination: result.pagination,
+      });
     } catch (error) {
       next(new HttpException(500, "Failed to fetch friend requests"));
     }
