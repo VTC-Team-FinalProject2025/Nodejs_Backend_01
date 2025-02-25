@@ -7,10 +7,13 @@ export default function authWebSocketMiddleware(
 ) {
     const token = socket.handshake.auth?.token;
     let tokenPayload;
-    if (token) {
-        tokenPayload = JWTHelper.verifyToken(token, "ACCESS");
-        socket.data.userId = tokenPayload.userId;
-        return next();
+    try{
+        if (token) {
+            tokenPayload = JWTHelper.verifyToken(token, "ACCESS");
+            socket.data.userId = tokenPayload.userId;
+            return next();
+        }
+    } catch (error: any) {
     }
     return next(new HttpException(401, "Unauthorized"));
 }

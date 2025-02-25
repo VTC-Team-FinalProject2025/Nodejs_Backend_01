@@ -147,7 +147,7 @@ export default class FileController extends BaseController {
         await this.serverRepo.deleteServer(Number(id));
         res.status(200).json({ message: "Server deleted successfully" });
     } catch (error) {
-        next(new HttpException(500, "Failed to delete server"));
+        next(new HttpException(500, (error as any).message));
     }
   };
 
