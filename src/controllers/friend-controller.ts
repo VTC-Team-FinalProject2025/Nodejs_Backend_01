@@ -12,6 +12,12 @@ import { BaseController } from "./abstractions/base-controller";
 import express from "express";
 import { Database } from "firebase-admin/database";
 
+interface User {
+  id: number;
+  loginName: string;
+  avatarUrl: string;
+}
+
 export default class FriendShipController extends BaseController {
   public friendShipRepo: FriendShipRepository;
   public prisma: PrismaClient;
@@ -45,6 +51,8 @@ export default class FriendShipController extends BaseController {
     this.router.put("/block-friend", this.blockFriend);
     this.router.get("/lists-friend", this.friendsList);
     this.router.get("/friend-request-list", this.friendRequestList);
+    this.router.get("/list-friend-online", this.onlineFriendsList);
+    this.router.get("/list-friend-block", this.friendBlocksList);
     this.router.delete("/cancel-friend", this.cancelFriendRequest);
     this.router.delete("/unfriend", this.unFriendRequest);
     this.router.delete("/unblock", this.unblock);
@@ -75,6 +83,105 @@ export default class FriendShipController extends BaseController {
     await this.friendShipRepo.createFriendShip({ senderId, receiverId });
 
     response.json({ message: "Friend request sent successfully" });
+  };
+
+  onlineFriendsList = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+      const { userId } = request.user as { userId: number };
+      const { page = 1, limit = 10, search } = request.query;
+      const offset = (Number(page) - 1) * Number(limit);
+
+      const onlineUsersSnapshot = await this.db
+        .ref("usersOnline")
+        .once("value");
+      const onlineUsers = onlineUsersSnapshot.val() || {};
+      const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
+
+      const filterCondition = search
+        ? {
+            OR: [
+              {
+                senderId: Number(userId),
+                status: "accepted",
+                receiver: {
+                  id: { in: Array.from(onlineUserIds) },
+                  loginName: { contains: search, mode: "insensitive" },
+                },
+              },
+              {
+                receiverId: Number(userId),
+                status: "accepted",
+                sender: {
+                  id: { in: Array.from(onlineUserIds) },
+                  loginName: { contains: search, mode: "insensitive" },
+                },
+              },
+            ],
+          }
+        : {
+            OR: [
+              {
+                senderId: Number(userId),
+                receiverId: { in: Array.from(onlineUserIds) },
+              },
+              {
+                receiverId: Number(userId),
+                senderId: { in: Array.from(onlineUserIds) },
+              },
+            ],
+          };
+
+      const includeFields = {
+        sender: { select: { id: true, loginName: true, avatarUrl: true } },
+        receiver: { select: { id: true, loginName: true, avatarUrl: true } },
+      };
+
+      let onlineFriends: any = await this.friendShipRepo.getOnlineFriends(
+        onlineUserIds,
+        filterCondition,
+        includeFields,
+        Number(limit),
+        offset,
+      );
+
+      const uniqueFriendsMap = new Map<number, User>();
+
+      onlineFriends.forEach((friend: any) => {
+        if (!friend.sender || !friend.receiver) return; // Kiểm tra null
+
+        const friendData =
+          friend.sender.id === userId ? friend.receiver : friend.sender;
+
+        if (!uniqueFriendsMap.has(friendData.id)) {
+          uniqueFriendsMap.set(friendData.id, {
+            id: friendData.id,
+            loginName: friendData.loginName,
+            avatarUrl: friendData.avatarUrl,
+          });
+        }
+      });
+
+      const uniqueFriendsArray = Array.from(uniqueFriendsMap.values());
+
+      const totalFriends = uniqueFriendsArray.length;
+      const paginatedFriends = uniqueFriendsArray.slice(
+        offset,
+        offset + Number(limit),
+      );
+
+      response.json({
+        data: paginatedFriends,
+        pagination: {
+          total: totalFriends,
+          page: Number(page),
+          limit: Number(limit),
+          hasNextPage: offset + Number(limit) < totalFriends,
+          hasPrevPage: Number(page) > 1,
+        },
+      });
   };
 
   friendsList = async (
@@ -148,6 +255,7 @@ export default class FriendShipController extends BaseController {
 
         if (!uniqueFriendsMap.has(friendData.loginName)) {
           uniqueFriendsMap.set(friendData.loginName, {
+            id: friendData.id,
             loginName: friendData.loginName,
             avatarUrl: friendData.avatarUrl,
             online: onlineUserIds.has(friendData.id),
@@ -211,7 +319,66 @@ export default class FriendShipController extends BaseController {
         includeFields,
       );
 
-      response.json(result);
+      const formattedData = result.data.map((friendship: any) => ({
+        id: friendship.sender.id,
+        loginName: friendship.sender.loginName,
+        avatarUrl: friendship.sender.avatarUrl,
+      }));
+
+      response.json({
+        data: formattedData,
+        pagination: result.pagination,
+      });
+    } catch (error) {
+      next(new HttpException(500, "Failed to fetch friend requests"));
+    }
+  };
+
+  friendBlocksList = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { page = 1, limit = 10, search } = request.query;
+
+    try {
+      const filterCondition = search
+        ? {
+            OR: [
+              {
+                receiverId: Number(userId),
+                status: "blocked",
+                sender: {
+                  loginName: { contains: search, mode: "insensitive" },
+                },
+              },
+            ],
+          }
+        : { OR: [{ receiverId: Number(userId), status: "blocked" }] };
+
+      const includeFields = {
+        sender: { select: { id: true, loginName: true, avatarUrl: true } },
+      };
+
+      const result = await paginate(
+        this.prisma.friendship,
+        Number(page),
+        Number(limit),
+        filterCondition,
+        includeFields,
+      );
+
+      const formattedData = result.data.map((friendship: any) => ({
+        id: friendship.sender.id,
+        loginName: friendship.sender.loginName,
+        avatarUrl: friendship.sender.avatarUrl,
+      }));
+
+      response.json({
+        data: formattedData,
+        pagination: result.pagination,
+      });
     } catch (error) {
       next(new HttpException(500, "Failed to fetch friend requests"));
     }
@@ -265,11 +432,13 @@ export default class FriendShipController extends BaseController {
         senderId,
         receiverId: userId,
         status: "pending",
-      })) ? null : (await this.friendShipRepo.friendRequest({
-        senderId: userId,
-        receiverId: senderId,
-        status: "pending",
-      }));
+      }))
+        ? null
+        : await this.friendShipRepo.friendRequest({
+            senderId: userId,
+            receiverId: senderId,
+            status: "pending",
+          });
 
       if (!friendship) {
         return next(new HttpException(404, "Friendship not found"));
@@ -332,8 +501,14 @@ export default class FriendShipController extends BaseController {
     });
 
     if (!friendship) {
-      this.friendShipRepo.createFriendShip({ senderId: userId, receiverId: senderId, status: "blocked" });
-      return response.json({ message: "Blocked friend request was successful" });
+      this.friendShipRepo.createFriendShip({
+        senderId: userId,
+        receiverId: senderId,
+        status: "blocked",
+      });
+      return response.json({
+        message: "Blocked friend request was successful",
+      });
     }
 
     await this.friendShipRepo.updateFriendShipId(friendship.id, {
