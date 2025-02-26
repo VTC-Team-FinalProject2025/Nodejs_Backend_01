@@ -11,6 +11,7 @@ import {
 import { BaseController } from "./abstractions/base-controller";
 import express from "express";
 import { Database } from "firebase-admin/database";
+import NotificationRepository from '../repositories/notificationRepository';
 
 interface User {
   id: number;
@@ -22,17 +23,20 @@ export default class FriendShipController extends BaseController {
   public friendShipRepo: FriendShipRepository;
   public prisma: PrismaClient;
   public db: Database;
+  public notiRepo: NotificationRepository;
 
   constructor(
     friendShipRepo: FriendShipRepository,
     prisma: PrismaClient,
     db: Database,
+    notiRepo: NotificationRepository
   ) {
     super();
     this.path = "/friend";
     this.prisma = prisma;
     this.friendShipRepo = friendShipRepo;
     this.db = db;
+    this.notiRepo = notiRepo;
     this.initializeRoutes();
   }
 
@@ -80,7 +84,13 @@ export default class FriendShipController extends BaseController {
       return next(new HttpException(404, "This relationship already exists!"));
     }
 
-    await this.friendShipRepo.createFriendShip({ senderId, receiverId });
+    const createFriend =  await this.friendShipRepo.createFriendShip({ senderId, receiverId });
+
+    await this.notiRepo.createNotification({
+      userId: createFriend.receiverId,
+      message: `Có một lời mời kết bạn từ ${createFriend.sender.loginName}`,
+      type: "addFriend"
+    })
 
     response.json({ message: "Friend request sent successfully" });
   };
@@ -408,9 +418,15 @@ export default class FriendShipController extends BaseController {
       return next(new HttpException(404, "Friend request not found"));
     }
 
-    await this.friendShipRepo.updateFriendShipId(friendRequest.id, {
+    const updateFriend = await this.friendShipRepo.updateFriendShipId(friendRequest.id, {
       status: "accepted",
     });
+
+    await this.notiRepo.createNotification({
+      userId: updateFriend.senderId,
+      message: `${updateFriend.receiver.loginName} đã chấp nhận lời mời kết bạn`,
+      type: "acceptFriend"
+    })
 
     response.json({ message: "Friend request accepted successfully" });
   };
