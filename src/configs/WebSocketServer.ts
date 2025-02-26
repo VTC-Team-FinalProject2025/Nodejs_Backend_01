@@ -1,27 +1,25 @@
 import { Server } from "socket.io";
 import { Server as HTTPServer } from "http";
-import { WebSocketController } from "../controllers/websocket/WebSocketController";
-import {OnlineUserController} from  "../controllers/websocket/onlineUser-controller"
+import { OnlineUserController } from "../controllers/websocket/onlineUser-controller";
 import authWebSocketMiddleware from "../middlewares/authWebSocket.middleware";
+import NotificationRepository from "../repositories/notificationRepository";
 import { db } from "./firebase";
 
 class WebSocketServer {
   private io: Server;
-  private webSocketController: WebSocketController;
   private onlineUserController: OnlineUserController;
 
-  constructor(httpServer: HTTPServer) {
+  constructor(httpServer: HTTPServer, notiRepo: NotificationRepository) {
     this.io = new Server(httpServer, {
-      cors: { 
-        origin: "*", 
-        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], 
+      cors: {
+        origin: "*",
+        methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allowedHeaders: ["*"],
-        credentials: true, 
+        credentials: true,
       },
     });
-    this.io.use(authWebSocketMiddleware); 
-    this.webSocketController = new WebSocketController(this.io);
-    this.onlineUserController = new OnlineUserController(this.io, db);
+    this.io.use(authWebSocketMiddleware);
+    this.onlineUserController = new OnlineUserController(this.io, db, notiRepo);
   }
 
   public broadcast(event: string, data: any) {

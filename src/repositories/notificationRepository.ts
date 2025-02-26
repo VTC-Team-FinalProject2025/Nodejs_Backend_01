@@ -16,4 +16,19 @@ export default class FriendShipRepository {
       data,
     });
   }
+
+  async countUnreadNotifications(userId: number) {
+    return await this.prisma.notification.count({
+      where: {
+        userId,
+        isRead: false
+      },
+    });
+  }
+  async markAsRead(userId: number) {
+    await this.prisma.notification.updateMany({
+      where: { userId, isRead: false },
+      data: { isRead: true },
+    });
+  }
 }

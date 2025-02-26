@@ -11,7 +11,7 @@ import FriendShipRepository from "./repositories/FriendRepository";
 
 import ServerRepository from "./repositories/serverRepository";
 import ChannelRepository from "./repositories/channelRepository";
-import NotificationRepository from './repositories/notificationRepository';
+import NotificationRepository from "./repositories/notificationRepository";
 import { db } from "./configs/firebase";
 dotenv.config();
 
@@ -28,6 +28,9 @@ const app = new App(
     new UploadController(),
     new FriendShipController(friendShipRepo, prismaClient, db, notiRepo),
     new ServerController(serverRepo, channelRepo, prismaClient),
-  ], port);
+  ],
+  port,
+  notiRepo,
+);
 
 app.listen();
