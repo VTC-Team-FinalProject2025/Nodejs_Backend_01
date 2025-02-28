@@ -13,6 +13,7 @@ import ChannelRepository from "./repositories/channelRepository";
 import NotificationRepository from "./repositories/notificationRepository";
 import NotificationController from './controllers/notification-controller'
 import { db } from "./configs/firebase";
+import ChannelController from "./controllers/channel-controller";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -28,7 +29,8 @@ const app = new App(
     new UploadController(),
     new FriendShipController(friendShipRepo, prismaClient, db, notiRepo),
     new ServerController(serverRepo, channelRepo, prismaClient),
-    new NotificationController(notiRepo,prismaClient)
+    new NotificationController(notiRepo,prismaClient),
+    new ChannelController(channelRepo, serverRepo),
   ],
   port,
   notiRepo,

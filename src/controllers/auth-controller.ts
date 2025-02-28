@@ -278,7 +278,7 @@ export default class AuthController extends BaseController {
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
       this.setTokenIntoCookie(token, refresh_token, response, userCreate);
     }
-    return response.redirect(URL_CLIENT+'/me');
+    return response.redirect(URL_CLIENT+'/main/me');
   };
 
   handleGitHubCallback = async (
@@ -312,7 +312,7 @@ export default class AuthController extends BaseController {
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
       this.setTokenIntoCookie(token, refresh_token, response, userCreate);
     }
-    return response.redirect(URL_CLIENT+"/me");
+    return response.redirect(URL_CLIENT+"/main/me");
   };
 
   resendEmailVertify = async (

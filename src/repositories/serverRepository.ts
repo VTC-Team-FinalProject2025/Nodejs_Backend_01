@@ -104,6 +104,15 @@ export default class ServerRepository {
                         name: true,
                         color: true,
                     }
+                },
+                InviteLink: {
+                    select: {
+                        id: true,
+                        count: true,
+                        token: true,
+                        createdAt: true,
+                        expireAt: true,
+                    }
                 }
             }
         });
@@ -181,9 +190,9 @@ export default class ServerRepository {
             }
         });
     }
-    getInviteToken = async (serverId: number) => {
+    getInviteToken = async (serverId: number, getValidToken: boolean = false) => {
         return await this.prisma.inviteLink.findFirst({
-            where: {
+            where: getValidToken ? {
                 serverId,
                 count: {
                     not: 0
@@ -191,6 +200,8 @@ export default class ServerRepository {
                 expireAt: {
                     gte: new Date(),
                 }
+            } : {
+                
             }
         });
     }
