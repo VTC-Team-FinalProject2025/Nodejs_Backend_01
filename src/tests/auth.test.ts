@@ -37,8 +37,8 @@ describe('AuthController API Tests', () => {
         const res = await request(app)
             .post('/api/auth/login')
             .send({
-                input: 'levu1962004@gmail.com',
-                password: 'Vanbi081072@'
+                input: 'test@gmail.com',
+                password: 'test@'
             });
         
         expect(res.statusCode).toBe(200);
