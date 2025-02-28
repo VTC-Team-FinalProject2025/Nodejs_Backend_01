@@ -6,7 +6,7 @@ import errorMiddleware from "./middlewares/error.middleware";
 import swaggerUi from "swagger-ui-express";
 import { openapiSpecification } from "./configs/setUpSwagger";
 import Passport from "./configs/auth/Passport";
-import { createServer, Server as HTTPServer } from "http";
+import { createServer, Server as HTTPServer, Server } from "http";
 import WebSocketServer from "./configs/WebSocketServer";
 import { URL_CLIENT } from "./constants";
 import NotificationRepository from "./repositories/notificationRepository";
@@ -68,10 +68,10 @@ class App {
     this.app.use(Passport.initialize());
   }
 
-  public listen() {
-    this.httpServer.listen(this.port, () => {
+  public listen(): Server {
+    return this.httpServer.listen(this.port, () => {
       console.log(`🚀 Server listening on port ${this.port}`);
-    });
+    }) as Server;
   }
 
   public getWebSocketServer(): WebSocketServer {
