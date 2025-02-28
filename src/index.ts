@@ -8,10 +8,10 @@ import { PrismaClient } from "@prisma/client";
 import Passport from "./configs/auth/Passport";
 import FriendShipController from "./controllers/friend-controller";
 import FriendShipRepository from "./repositories/FriendRepository";
-
 import ServerRepository from "./repositories/serverRepository";
 import ChannelRepository from "./repositories/channelRepository";
 import NotificationRepository from "./repositories/notificationRepository";
+import NotificationController from './controllers/notification-controller'
 import { db } from "./configs/firebase";
 dotenv.config();
 
@@ -28,6 +28,7 @@ const app = new App(
     new UploadController(),
     new FriendShipController(friendShipRepo, prismaClient, db, notiRepo),
     new ServerController(serverRepo, channelRepo, prismaClient),
+    new NotificationController(notiRepo,prismaClient)
   ],
   port,
   notiRepo,
