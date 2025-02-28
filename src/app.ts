@@ -9,6 +9,7 @@ import Passport from "./configs/auth/Passport";
 import { createServer, Server as HTTPServer } from "http";
 import WebSocketServer from "./configs/WebSocketServer";
 import { URL_CLIENT } from "./constants";
+import NotificationRepository from "./repositories/notificationRepository";
 
 class App {
   public app: express.Application;
@@ -16,7 +17,11 @@ class App {
   private httpServer: HTTPServer;
   private websocketServer: WebSocketServer;
 
-  constructor(controllers: BaseController[], port: number | string) {
+  constructor(
+    controllers: BaseController[],
+    port: number | string,
+    notiRepo: NotificationRepository,
+  ) {
     this.app = express();
     this.port = port;
     this.httpServer = createServer(this.app);
@@ -26,17 +31,17 @@ class App {
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
 
-    this.websocketServer = new WebSocketServer(this.httpServer);
+    this.websocketServer = new WebSocketServer(this.httpServer, notiRepo);
   }
 
   private initializeMiddlewares() {
     this.app.use(cookieParser());
-    this.app.use(cors(
-      {
+    this.app.use(
+      cors({
         origin: URL_CLIENT, // Domain frontend
         credentials: true, // Cho phép gửi cookie và header Authorization
-      }
-    ));
+      }),
+    );
     this.app.use(express.json());
   }
 

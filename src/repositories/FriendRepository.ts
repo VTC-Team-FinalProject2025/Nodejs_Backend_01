@@ -20,6 +20,10 @@ export default class FriendShipRepository {
   async createFriendShip(data: FriendShipCreateInput) {
     return await this.prisma.friendship.create({
       data,
+      include: {
+        sender: { select: { id: true, loginName: true, avatarUrl: true } },
+        receiver: { select: { id: true, loginName: true, avatarUrl: true } },
+      },
     });
   }
 
@@ -76,6 +80,10 @@ export default class FriendShipRepository {
         id,
       },
       data,
+      include: {
+        sender: { select: { id: true, loginName: true, avatarUrl: true } },
+        receiver: { select: { id: true, loginName: true, avatarUrl: true } },
+      },
     });
   }
 

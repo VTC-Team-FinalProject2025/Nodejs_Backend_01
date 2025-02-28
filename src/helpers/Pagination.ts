@@ -17,7 +17,8 @@ const paginate = async <T>(
   page: number = 1,
   limit: number = 10,
   filterCondition?: Prisma.PrismaClientKnownRequestError | object,
-  includeFields?: object
+  includeFields?: object,
+  orderBy?: object
 ): Promise<PaginationResult<T>> => {
   const skip = (page - 1) * limit;
 
@@ -27,6 +28,7 @@ const paginate = async <T>(
       include: includeFields,
       skip,
       take: limit,
+      orderBy,
     }),
     model.count({ where: filterCondition }),
   ]);

@@ -1,9 +1,17 @@
+enum TypeStatusNotification {
+  acceptFriend
+  addFriend
+  message
+  server
+}
+
 model Notification {
-  id        Int      @id @default(autoincrement())
+  id        Int                    @id @default(autoincrement())
   userId    Int
   message   String
-  isRead    Boolean
-  createdAt DateTime @default(now())
+  isRead    Boolean                @default(false)
+  type      TypeStatusNotification
+  createdAt DateTime               @default(now())
 
   User Users @relation(fields: [userId], references: [id], onDelete: Cascade)
 
