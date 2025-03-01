@@ -14,6 +14,7 @@ import NotificationRepository from "./repositories/notificationRepository";
 import NotificationController from './controllers/notification-controller'
 import { db } from "./configs/firebase";
 import ChannelController from "./controllers/channel-controller";
+import UserController from "./controllers/user-controller";
 import { Server } from "http";
 dotenv.config();
 
@@ -32,6 +33,7 @@ const app = new App(
     new ServerController(serverRepo, channelRepo, prismaClient),
     new NotificationController(notiRepo,prismaClient),
     new ChannelController(channelRepo, serverRepo),
+    new UserController(userRepo)
   ],
   port,
   notiRepo,
