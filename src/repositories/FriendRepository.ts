@@ -93,48 +93,46 @@ export default class FriendShipRepository {
     });
   }
 
-  async getOfflineFriends(
-    onlineUserIds: Set<number>,
+  async getAllFriends(
     filterCondition: any,
     includeFields: any,
-    remainingLimit: number,
-    offset: number,
-    onlineFriendsCount: number
+    limit: number,
+    page: number
   ) {
     return await this.prisma.friendship.findMany({
       where: {
-        ...filterCondition,
         status: "accepted",
-        OR: [
-          { senderId: { notIn: Array.from(onlineUserIds) } },
-          { receiverId: { notIn: Array.from(onlineUserIds) } },
-        ],
+        ...filterCondition
       },
       include: includeFields,
-      take: remainingLimit,
-      skip: Math.max(0, offset - onlineFriendsCount)
+      take: limit,
+      skip: (page - 1) * limit,
     });
   }
 
   async getOnlineFriends(
+    userId: number,
     onlineUserIds: Set<number>,
-    filterCondition: any,
-    includeFields: any,
-    limit: number,
-    offset: number
+    includeFields: any
   ) {
     return await this.prisma.friendship.findMany({
       where: {
-        ...filterCondition,
         status: "accepted",
         OR: [
-          { senderId: { in: Array.from(onlineUserIds) } },
-          { receiverId: { in: Array.from(onlineUserIds) } },
+          { senderId: { in: Array.from(onlineUserIds) }, receiverId: userId},
+          { receiverId: { in: Array.from(onlineUserIds) }, senderId: userId},
         ],
       },
-      include: includeFields,
-      take: limit,
-      skip: offset,
+      include: includeFields
+    });
+  }
+
+  async countFriends(filterCondition: any) {
+    return await this.prisma.friendship.count({
+      where: {
+        status: "accepted",
+        ...filterCondition
+      },
     });
   }
 }
