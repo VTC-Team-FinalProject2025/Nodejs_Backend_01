@@ -141,14 +141,12 @@ export default class FriendShipRepository {
   async listFriendUser(userId: number) {
     return await this.prisma.friendship.findMany({
       where: {
-        OR: [
-          { senderId: userId, status: "accepted" },
-          { receiverId: userId, status: "accepted" },
-        ],
+        OR: [{ senderId: userId }, { receiverId: userId }],
       },
       select: {
         senderId: true,
         receiverId: true,
+        status: true,
       },
     });
   }
@@ -158,8 +156,8 @@ export default class FriendShipRepository {
       where: {
         OR: friendIds.map((id: number) => ({
           OR: [
-            { senderId: id, status: "accepted" },
-            { receiverId: id, status: "accepted" },
+            { senderId: id, status: { in: ["accepted"] } },
+            { receiverId: id, status: { in: ["accepted"] } },
           ],
         })),
       },
