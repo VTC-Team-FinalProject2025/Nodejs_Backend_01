@@ -135,4 +135,62 @@ export default class FriendShipRepository {
       },
     });
   }
+
+  async listFriendUser(userId: number) {
+    return await this.prisma.friendship.findMany({
+      where: {
+        OR: [{ senderId: userId }, { receiverId: userId }],
+      },
+      select: {
+        senderId: true,
+        receiverId: true,
+        status: true,
+      },
+    });
+  }
+
+  async suggestedFriends(friendIds: number[]) {
+    return await this.prisma.friendship.findMany({
+      where: {
+        OR: friendIds.map((id: number) => ({
+          OR: [
+            { senderId: id, status: { in: ["accepted"] } },
+            { receiverId: id, status: { in: ["accepted"] } },
+          ],
+        })),
+      },
+      select: {
+        senderId: true,
+        receiverId: true,
+      },
+    });
+  }
+
+  async getExcludedUsers(userId: number) {
+    const friendships = await this.prisma.friendship.findMany({
+      where: {
+        OR: [
+          {
+            senderId: userId,
+            status: { in: ["accepted", "pending", "blocked"] },
+          },
+          {
+            receiverId: userId,
+            status: { in: ["accepted", "pending", "blocked"] },
+          },
+        ],
+      },
+      select: {
+        senderId: true,
+        receiverId: true,
+      },
+    });
+    const excludedUserIds = new Set<number>([userId]);
+    friendships.forEach((f) => {
+      if (f.senderId !== userId) excludedUserIds.add(f.senderId);
+      if (f.receiverId !== userId) excludedUserIds.add(f.receiverId);
+    });
+
+    return Array.from(excludedUserIds);
+  }
 }
