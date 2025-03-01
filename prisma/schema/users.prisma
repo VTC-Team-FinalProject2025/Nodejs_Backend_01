@@ -27,5 +27,7 @@ model Users {
 
   OwnedServers Server[] @relation("UserServers")
 
+  tokens TokenNotification[]
+
   @@map("users")
 }
