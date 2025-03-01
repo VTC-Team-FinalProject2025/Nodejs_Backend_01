@@ -33,6 +33,12 @@ export class OnlineUserController {
         await this.sendNotificationCount(Number(userId));
       });
 
+      socket.on("saveTokenNotification", async (token: string) => {
+        if(token) {
+          await this.notiRepo.saveTokenNotification(Number(userId), String(token));
+        }
+      });
+
       console.log(`🔗 Client connected: ${userId}`);
 
       socket.on("disconnect", async () => {
