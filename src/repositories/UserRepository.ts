@@ -100,4 +100,44 @@ export default class UserRepository {
       where: { id: { in: Array.from(suggestedFriendIds) } },
     });
   }
+
+  async findUsersExcludedUserIds(
+    query: string,
+    excludedUserIds: number[],
+    page: number,
+    limit: number,
+  ) {
+    return await this.prisma.users.findMany({
+      where: {
+        id: { notIn: excludedUserIds },
+        OR: [
+          { firstName: { contains: query } },
+          { lastName: { contains: query } },
+          { loginName: { contains: query }},
+        ],
+      },
+      select: {
+        id: true,
+        firstName: true,
+        lastName: true,
+        loginName: true,
+        avatarUrl: true,
+      },
+      skip: (page - 1) * limit,
+      take: limit,
+    });
+  }
+
+  async countUsersExcludedUserIds(query: string, excludedUserIds: number[]) {
+    return await this.prisma.users.count({
+      where: {
+        id: { notIn: excludedUserIds },
+        OR: [
+          { firstName: { contains: query } },
+          { lastName: { contains: query } },
+          { loginName: { contains: query } },
+        ],
+      },
+    });
+  }
 }

@@ -61,6 +61,7 @@ export default class FriendShipController extends BaseController {
     this.router.get("/list-friend-online", this.onlineFriendsList);
     this.router.get("/list-friend-block", this.friendBlocksList);
     this.router.get("/list-friend-suggestions", this.friendSuggestions);
+    this.router.get("/search-friend", this.searchFriend);
     this.router.delete("/cancel-friend", this.cancelFriendRequest);
     this.router.delete("/unfriend", this.unFriendRequest);
     this.router.delete("/unblock", this.unblock);
@@ -622,4 +623,34 @@ export default class FriendShipController extends BaseController {
       },
     });
   };
+
+  searchFriend =  async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { search, page = 1, limit = 10 } = request.query;
+    const pageNumber = Number(page);
+    const limitNumber = Number(limit);
+
+    const excludedUserIds = await this.friendShipRepo.getExcludedUsers(userId);
+    const users = await this.userRepo.findUsersExcludedUserIds(search as string, excludedUserIds, pageNumber, limitNumber);
+    const total = await this.userRepo.countUsersExcludedUserIds(search as string, excludedUserIds);
+    const totalPages = Math.ceil(total / limitNumber);
+    const hasNextPage = pageNumber < totalPages;
+    const hasPrevPage = pageNumber > 1;
+
+    return response.json({
+      data: users,
+      pagination: {
+        total,
+        page: pageNumber,
+        limit: limitNumber,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+      },
+    });
+  }
 }
