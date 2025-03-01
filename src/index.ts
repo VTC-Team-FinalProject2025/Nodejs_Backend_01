@@ -28,7 +28,7 @@ const app = new App(
   [
     new AuthController(userRepo, Passport),
     new UploadController(),
-    new FriendShipController(friendShipRepo, prismaClient, db, notiRepo),
+    new FriendShipController(friendShipRepo, prismaClient, db, notiRepo, userRepo),
     new ServerController(serverRepo, channelRepo, prismaClient),
     new NotificationController(notiRepo,prismaClient),
     new ChannelController(channelRepo, serverRepo),

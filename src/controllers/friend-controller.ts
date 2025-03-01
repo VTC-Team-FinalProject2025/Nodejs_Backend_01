@@ -11,7 +11,8 @@ import {
 import { BaseController } from "./abstractions/base-controller";
 import express from "express";
 import { Database } from "firebase-admin/database";
-import NotificationRepository from '../repositories/notificationRepository';
+import NotificationRepository from "../repositories/notificationRepository";
+import UserRepository from "../repositories/UserRepository";
 
 interface User {
   id: number;
@@ -24,12 +25,13 @@ export default class FriendShipController extends BaseController {
   public prisma: PrismaClient;
   public db: Database;
   public notiRepo: NotificationRepository;
-
+  public userRepo: UserRepository;
   constructor(
     friendShipRepo: FriendShipRepository,
     prisma: PrismaClient,
     db: Database,
-    notiRepo: NotificationRepository
+    notiRepo: NotificationRepository,
+    userRepo: UserRepository,
   ) {
     super();
     this.path = "/friend";
@@ -37,6 +39,7 @@ export default class FriendShipController extends BaseController {
     this.friendShipRepo = friendShipRepo;
     this.db = db;
     this.notiRepo = notiRepo;
+    this.userRepo = userRepo;
     this.initializeRoutes();
   }
 
@@ -57,6 +60,7 @@ export default class FriendShipController extends BaseController {
     this.router.get("/friend-request-list", this.friendRequestList);
     this.router.get("/list-friend-online", this.onlineFriendsList);
     this.router.get("/list-friend-block", this.friendBlocksList);
+    this.router.get("/list-friend-suggestions", this.friendSuggestions);
     this.router.delete("/cancel-friend", this.cancelFriendRequest);
     this.router.delete("/unfriend", this.unFriendRequest);
     this.router.delete("/unblock", this.unblock);
@@ -84,13 +88,16 @@ export default class FriendShipController extends BaseController {
       return next(new HttpException(404, "This relationship already exists!"));
     }
 
-    const createFriend =  await this.friendShipRepo.createFriendShip({ senderId, receiverId });
+    const createFriend = await this.friendShipRepo.createFriendShip({
+      senderId,
+      receiverId,
+    });
 
     await this.notiRepo.createNotification({
       userId: createFriend.receiverId,
       message: `Có một lời mời kết bạn từ ${createFriend.sender.loginName}`,
-      type: "addFriend"
-    })
+      type: "addFriend",
+    });
 
     response.json({ message: "Friend request sent successfully" });
   };
@@ -100,98 +107,96 @@ export default class FriendShipController extends BaseController {
     response: express.Response,
     next: express.NextFunction,
   ) => {
-      const { userId } = request.user as { userId: number };
-      const { page = 1, limit = 10, search } = request.query;
-      const offset = (Number(page) - 1) * Number(limit);
+    const { userId } = request.user as { userId: number };
+    const { page = 1, limit = 10, search } = request.query;
+    const offset = (Number(page) - 1) * Number(limit);
 
-      const onlineUsersSnapshot = await this.db
-        .ref("usersOnline")
-        .once("value");
-      const onlineUsers = onlineUsersSnapshot.val() || {};
-      const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
+    const onlineUsersSnapshot = await this.db.ref("usersOnline").once("value");
+    const onlineUsers = onlineUsersSnapshot.val() || {};
+    const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
 
-      const filterCondition = search
-        ? {
-            OR: [
-              {
-                senderId: Number(userId),
-                status: "accepted",
-                receiver: {
-                  id: { in: Array.from(onlineUserIds) },
-                  loginName: { contains: search, mode: "insensitive" },
-                },
+    const filterCondition = search
+      ? {
+          OR: [
+            {
+              senderId: Number(userId),
+              status: "accepted",
+              receiver: {
+                id: { in: Array.from(onlineUserIds) },
+                loginName: { contains: search, mode: "insensitive" },
               },
-              {
-                receiverId: Number(userId),
-                status: "accepted",
-                sender: {
-                  id: { in: Array.from(onlineUserIds) },
-                  loginName: { contains: search, mode: "insensitive" },
-                },
+            },
+            {
+              receiverId: Number(userId),
+              status: "accepted",
+              sender: {
+                id: { in: Array.from(onlineUserIds) },
+                loginName: { contains: search, mode: "insensitive" },
               },
-            ],
-          }
-        : {
-            OR: [
-              {
-                senderId: Number(userId),
-                receiverId: { in: Array.from(onlineUserIds) },
-              },
-              {
-                receiverId: Number(userId),
-                senderId: { in: Array.from(onlineUserIds) },
-              },
-            ],
-          };
-
-      const includeFields = {
-        sender: { select: { id: true, loginName: true, avatarUrl: true } },
-        receiver: { select: { id: true, loginName: true, avatarUrl: true } },
-      };
-
-      let onlineFriends: any = await this.friendShipRepo.getOnlineFriends(
-        onlineUserIds,
-        filterCondition,
-        includeFields,
-        Number(limit),
-        offset,
-      );
-
-      const uniqueFriendsMap = new Map<number, User>();
-
-      onlineFriends.forEach((friend: any) => {
-        if (!friend.sender || !friend.receiver) return; // Kiểm tra null
-
-        const friendData =
-          friend.sender.id === userId ? friend.receiver : friend.sender;
-
-        if (!uniqueFriendsMap.has(friendData.id)) {
-          uniqueFriendsMap.set(friendData.id, {
-            id: friendData.id,
-            loginName: friendData.loginName,
-            avatarUrl: friendData.avatarUrl,
-          });
+            },
+          ],
         }
-      });
+      : {
+          OR: [
+            {
+              senderId: Number(userId),
+              receiverId: { in: Array.from(onlineUserIds) },
+            },
+            {
+              receiverId: Number(userId),
+              senderId: { in: Array.from(onlineUserIds) },
+            },
+          ],
+        };
 
-      const uniqueFriendsArray = Array.from(uniqueFriendsMap.values());
+    const includeFields = {
+      sender: { select: { id: true, loginName: true, avatarUrl: true } },
+      receiver: { select: { id: true, loginName: true, avatarUrl: true } },
+    };
 
-      const totalFriends = uniqueFriendsArray.length;
-      const paginatedFriends = uniqueFriendsArray.slice(
-        offset,
-        offset + Number(limit),
-      );
+    let onlineFriends: any = await this.friendShipRepo.getOnlineFriends(
+      onlineUserIds,
+      filterCondition,
+      includeFields,
+      Number(limit),
+      offset,
+    );
 
-      response.json({
-        data: paginatedFriends,
-        pagination: {
-          total: totalFriends,
-          page: Number(page),
-          limit: Number(limit),
-          hasNextPage: offset + Number(limit) < totalFriends,
-          hasPrevPage: Number(page) > 1,
-        },
-      });
+    const uniqueFriendsMap = new Map<number, User>();
+
+    onlineFriends.forEach((friend: any) => {
+      if (!friend.sender || !friend.receiver) return;
+
+      const friendData =
+        friend.sender.id === userId ? friend.receiver : friend.sender;
+
+      if (!uniqueFriendsMap.has(friendData.id)) {
+        uniqueFriendsMap.set(friendData.id, {
+          id: friendData.id,
+          loginName: friendData.loginName,
+          avatarUrl: friendData.avatarUrl,
+        });
+      }
+    });
+
+    const uniqueFriendsArray = Array.from(uniqueFriendsMap.values());
+
+    const totalFriends = uniqueFriendsArray.length;
+    const paginatedFriends = uniqueFriendsArray.slice(
+      offset,
+      offset + Number(limit),
+    );
+
+    response.json({
+      data: paginatedFriends,
+      pagination: {
+        total: totalFriends,
+        page: Number(page),
+        limit: Number(limit),
+        hasNextPage: offset + Number(limit) < totalFriends,
+        hasPrevPage: Number(page) > 1,
+      },
+    });
   };
 
   friendsList = async (
@@ -418,15 +423,18 @@ export default class FriendShipController extends BaseController {
       return next(new HttpException(404, "Friend request not found"));
     }
 
-    const updateFriend = await this.friendShipRepo.updateFriendShipId(friendRequest.id, {
-      status: "accepted",
-    });
+    const updateFriend = await this.friendShipRepo.updateFriendShipId(
+      friendRequest.id,
+      {
+        status: "accepted",
+      },
+    );
 
     await this.notiRepo.createNotification({
       userId: updateFriend.senderId,
       message: `${updateFriend.receiver.loginName} đã chấp nhận lời mời kết bạn`,
-      type: "acceptFriend"
-    })
+      type: "acceptFriend",
+    });
 
     response.json({ message: "Friend request accepted successfully" });
   };
@@ -561,5 +569,57 @@ export default class FriendShipController extends BaseController {
     await this.friendShipRepo.deleteFriendship(friendship.id);
 
     response.json({ message: "Block open successfully" });
+  };
+
+  friendSuggestions = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { page = 1, limit = 10 } = request.query;
+
+    const friends = await this.friendShipRepo.listFriendUser(userId);
+    const friendIds = friends.map((f) =>
+      f.senderId === userId ? f.receiverId : f.senderId,
+    );
+
+    const suggestedFriends = await this.friendShipRepo.suggestedFriends(
+      friendIds,
+    );
+
+    const suggestedFriendIds = new Set();
+    suggestedFriends.forEach((f) => {
+      if (f.senderId !== userId && !friendIds.includes(f.senderId)) {
+        suggestedFriendIds.add(f.senderId);
+      }
+      if (f.receiverId !== userId && !friendIds.includes(f.receiverId)) {
+        suggestedFriendIds.add(f.receiverId);
+      }
+    });
+
+    const total = await this.userRepo.totalUsersArray(suggestedFriendIds);
+
+    const users = await this.userRepo.filterUserListArray(
+      suggestedFriendIds,
+      Number(page),
+      Number(limit),
+    );
+
+    const totalPages = Math.ceil(Number(total) / Number(limit));
+    const hasNextPage = Number(page) < totalPages;
+    const hasPrevPage = Number(page) > 1;
+
+    response.json({
+      data: users,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages,
+        hasNextPage,
+        hasPrevPage,
+      },
+    });
   };
 }
