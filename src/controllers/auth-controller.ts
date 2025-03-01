@@ -331,7 +331,7 @@ export default class AuthController extends BaseController {
       return next(new HttpException(404, {message: "This email does not exist", code: "EMAIL_NOT_EXIST"}));
     }
     if(user.isEmailVertify){
-      return next(new HttpException(400, {message: "Email is already vertify", code: "EMAIL_ALREADY_VERTIFY"}));
+      return next(new HttpException(400, {message: "Email is already verify", code: "EMAIL_ALREADY_VERIFY"}));
     }
     const vertifyToken = await JWTHelper.generateToken(
       { userId: user.id },
