@@ -1,0 +1,29 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Lấy mã nguồn mới nhất
+        uses: actions/checkout@v3
+
+      - name: Fetch & Pull code mới nhất
+        run: |
+          git fetch --all
+          git pull origin master
+
+      - name: Thiết lập Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18  # Chọn phiên bản Node.js phù hợp
+
+      - name: Cài đặt dependencies
+        run: npm install
+
+      - name: Test API
+        run: npm run test
