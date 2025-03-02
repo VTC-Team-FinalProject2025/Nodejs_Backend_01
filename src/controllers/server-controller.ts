@@ -39,6 +39,7 @@ export default class FileController extends BaseController {
     this.router.post(`/join`, this.joinServer);
     this.router.post(`/leave/:id`, this.leaveServer);
     this.router.post(`/invite-token`, validateSchema(InviteLinkSchema), this.createInviteLink);
+    this.router.get(`/invite-token/:token`, this.getServerByInviteToken);
   }
 
   private createServer = async (req: Request, res: Response, next: NextFunction) => {
@@ -166,6 +167,7 @@ export default class FileController extends BaseController {
         try{
           member = await this.serverRepo.joinServer({userId, serverId: server.id});
         } catch (error: any) {
+          console.log(error);
           return next(new HttpException(400, error.message));
         }
         
@@ -204,13 +206,27 @@ export default class FileController extends BaseController {
             return next(new HttpException(403, "You are not the owner of this server"));
         }
         const inviteLinkBefore = await this.serverRepo.getInviteToken(serverId);
+        console.log(inviteLinkBefore);
         if(inviteLinkBefore){
             await this.serverRepo.deleteInviteToken(serverId);
         }
         const inviteLink = await this.serverRepo.generateInviteToken({serverId, count, expireIn});
         res.status(200).json(inviteLink);
     } catch (error) {
-        next(new HttpException(500, "Failed to create invite link"));
+        next(new HttpException(500, error as string));
     }
   };
+
+  private getServerByInviteToken = async (req: Request, res: Response, next: NextFunction) => {
+    const { token } = req.params;
+    try {
+        const server = await this.serverRepo.getServerByInviteToken(token);
+        if (!server) {
+            return next(new HttpException(404, "Server not found"));
+        }
+        res.status(200).json(server);
+    } catch (error) {
+        next(new HttpException(500, "Failed to retrieve server"));
+    }
+  }
 } 

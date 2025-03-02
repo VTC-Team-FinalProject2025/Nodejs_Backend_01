@@ -149,7 +149,21 @@ export default class ServerRepository {
                 }
             },
             include: {
-                InviteLink: true
+                InviteLink: true,
+                Owner: {
+                    select: {
+                        id: true,
+                        firstName: true,
+                        lastName: true,
+                        loginName: true,
+                        avatarUrl: true,
+                    }
+                },
+                _count: {
+                    select: {
+                        Members: true,
+                    },
+                }
             }
         });
     }
@@ -201,7 +215,7 @@ export default class ServerRepository {
                     gte: new Date(),
                 }
             } : {
-                
+                serverId: serverId
             }
         });
     }
@@ -239,8 +253,9 @@ export default class ServerRepository {
                 }
             });
             if(!inviteLink) throw new Error("Invite link not found or expired");
+            let decreaseCount;
             if(inviteLink.count > 0) {
-                let decreaseCount =  px.inviteLink.update({
+                decreaseCount =  px.inviteLink.update({
                     where: {
                         id: inviteLink.id
                     },
@@ -248,16 +263,16 @@ export default class ServerRepository {
                         count: inviteLink.count - 1
                     }
                 });
-                let createrMemberShip = this.prisma.server_member.create({
-                    data: {
-                        userId: data.userId,
-                        serverId: data.serverId,
-                        roleId: role.id
-                    }
-                });
-                const result =  await Promise.all([decreaseCount, createrMemberShip]);
-                return {memberShip: result[1]};
             }
+            let createrMemberShip = await this.prisma.server_member.create({
+                data: {
+                    userId: data.userId,
+                    serverId: data.serverId,
+                    roleId: role.id
+                }
+            });
+            const result =  await Promise.all([decreaseCount, createrMemberShip]);
+            return {memberShip: result[1]};
         });
         return result?.memberShip;
     }
