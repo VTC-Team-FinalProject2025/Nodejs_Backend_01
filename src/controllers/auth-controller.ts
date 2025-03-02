@@ -148,7 +148,7 @@ export default class AuthController extends BaseController {
       phone,
       password: hashSync(password, BYCRYPT_SALT),
     });
-    const vertifyToken = await JWTHelper.generateToken(
+    const vertifyToken = JWTHelper.generateToken(
       { userId: user.id },
       "VERTIFY_EMAIL",
     );
@@ -355,7 +355,7 @@ export default class AuthController extends BaseController {
     }
     const payload = JWTHelper.verifyToken(refreshToken, "REFRESH");
 
-    if (!payload || !payload.userId) {
+    if (!payload?.userId) {
       return next(new HttpException(400, "Invalid refresh token"));
     }
     let getUserById = await this.userRepo.getUserById(payload.userId);

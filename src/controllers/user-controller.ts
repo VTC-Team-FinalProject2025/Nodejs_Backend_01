@@ -2,7 +2,6 @@ import express from "express";
 import { BaseController } from "./abstractions/base-controller";
 import authMiddleware from "../middlewares/authentication.middleware";
 import UserRepository from "../repositories/UserRepository";
-import { PrismaClient } from "@prisma/client";
 import HttpException from "../exceptions/http-exception";
 import bcrypt from "bcrypt";
 import { BYCRYPT_SALT } from "../constants";
@@ -14,7 +13,7 @@ import {
 } from "../schemas/user";
 
 export default class UserController extends BaseController {
-  private userRepo: UserRepository;
+  private readonly userRepo: UserRepository;
 
   constructor(userRepo: UserRepository) {
     super();
@@ -42,7 +41,7 @@ export default class UserController extends BaseController {
     );
   }
 
-  private updateLoginName = async (
+  private readonly updateLoginName = async (
     req: express.Request,
     res: express.Response,
     next: express.NextFunction,
@@ -70,7 +69,7 @@ export default class UserController extends BaseController {
     res.status(200).json({ message: "LoginName updated successfully" });
   };
 
-  private updateName = async (
+  private readonly updateName = async (
     req: express.Request,
     res: express.Response,
     next: express.NextFunction,
@@ -86,7 +85,7 @@ export default class UserController extends BaseController {
     res.status(200).json({ message: "Full name updated successfully" });
   };
 
-  private updatePassword = async (
+  private readonly updatePassword = async (
     req: express.Request,
     res: express.Response,
     next: express.NextFunction,

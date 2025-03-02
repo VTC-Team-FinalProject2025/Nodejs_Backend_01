@@ -14,8 +14,8 @@ import NotificationRepository from "./repositories/notificationRepository";
 class App {
   public app: express.Application;
   public port: number | string;
-  private httpServer: HTTPServer;
-  private websocketServer: WebSocketServer;
+  private readonly httpServer: HTTPServer;
+  private readonly websocketServer: WebSocketServer;
 
   constructor(
     controllers: BaseController[],

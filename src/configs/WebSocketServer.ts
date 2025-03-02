@@ -6,8 +6,8 @@ import NotificationRepository from "../repositories/notificationRepository";
 import { db } from "./firebase";
 
 class WebSocketServer {
-  private io: Server;
-  private onlineUserController: OnlineUserController;
+  private readonly io: Server;
+  private readonly onlineUserController: OnlineUserController;
 
   constructor(httpServer: HTTPServer, notiRepo: NotificationRepository) {
     this.io = new Server(httpServer, {
