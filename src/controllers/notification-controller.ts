@@ -6,8 +6,8 @@ import { PrismaClient } from "@prisma/client";
 import authMiddleware from "../middlewares/authentication.middleware";
 
 export default class NotificationController extends BaseController {
-    private notiRepo: NotificationRepository;
-    private prisma: PrismaClient;
+    private readonly notiRepo: NotificationRepository;
+    private readonly prisma: PrismaClient;
 
     constructor(notiRepo: NotificationRepository, prisma: PrismaClient) {
         super();
@@ -22,14 +22,14 @@ export default class NotificationController extends BaseController {
         this.router.get("/", this.ShowNotification);
     }
 
-    private ShowNotification = async (
+    private readonly ShowNotification = async (
         request: express.Request,
         response: express.Response,
         next: express.NextFunction,
     ) => {
         try {
             const { userId } = request.user;
-            const { page = 1, limit = 10, search } = request.query;
+            const { page = 1, limit = 10 } = request.query;
 
             const filterCondition = {
                 OR: [

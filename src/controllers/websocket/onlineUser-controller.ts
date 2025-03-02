@@ -2,9 +2,9 @@ import { Server, Socket } from "socket.io";
 import { Database } from "firebase-admin/database";
 import NotificationRepository from "../../repositories/notificationRepository";
 export class OnlineUserController {
-  private io: Server;
-  private db: Database;
-  private notiRepo: NotificationRepository;
+  private readonly io: Server;
+  private readonly db: Database;
+  private readonly notiRepo: NotificationRepository;
 
   constructor(io: Server, db: Database, notiRepo: NotificationRepository) {
     this.io = io;

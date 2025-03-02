@@ -5,9 +5,9 @@ import FileUploadException from "../exceptions/file-upload-exception";
 import multer from "multer";
 
 export default class FileController extends BaseController {
-  private fileRepository: FileRepository;
+  private readonly fileRepository: FileRepository;
 
-  private upload = multer({
+  private readonly upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
   });
@@ -26,7 +26,7 @@ export default class FileController extends BaseController {
     );
   }
 
-  private uploadFile = async (
+  private readonly uploadFile = async (
     request: express.Request,
     response: express.Response,
     next: express.NextFunction,

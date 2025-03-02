@@ -1,4 +1,4 @@
-import { Server, Socket } from "socket.io";
+import { Socket } from "socket.io";
 import HttpException from "../exceptions/http-exception";
 import JWTHelper from "../helpers/JWT";
 
