@@ -10,6 +10,7 @@ import { createServer, Server as HTTPServer, Server } from "http";
 import WebSocketServer from "./configs/WebSocketServer";
 import { URL_CLIENT } from "./constants";
 import NotificationRepository from "./repositories/notificationRepository";
+import Chat1v1Repository from "./repositories/chat1v1Repository";
 
 class App {
   public app: express.Application;
@@ -21,6 +22,7 @@ class App {
     controllers: BaseController[],
     port: number | string,
     notiRepo: NotificationRepository,
+    chat1v1Repo: Chat1v1Repository,
   ) {
     this.app = express();
     this.port = port;
@@ -31,7 +33,11 @@ class App {
     this.initializeControllers(controllers);
     this.initializeErrorHandling();
 
-    this.websocketServer = new WebSocketServer(this.httpServer, notiRepo);
+    this.websocketServer = new WebSocketServer(
+      this.httpServer,
+      notiRepo,
+      chat1v1Repo,
+    );
   }
 
   private initializeMiddlewares() {
