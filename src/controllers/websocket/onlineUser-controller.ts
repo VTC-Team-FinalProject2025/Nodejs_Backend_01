@@ -1,6 +1,7 @@
 import { Server, Socket } from "socket.io";
 import { Database } from "firebase-admin/database";
 import NotificationRepository from "../../repositories/notificationRepository";
+import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 export class OnlineUserController {
   private readonly io: Server;
   private readonly db: Database;
@@ -14,6 +15,7 @@ export class OnlineUserController {
   }
 
   private setupSocketEvents() {
+    this.io.use(authWebSocketMiddleware);
     this.io.on("connection", async (socket: Socket) => {
       const userId = String(socket.data.userId);
       if (!userId || userId === "undefined") {
