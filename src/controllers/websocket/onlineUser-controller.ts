@@ -2,15 +2,18 @@ import { Server, Socket } from "socket.io";
 import { Database } from "firebase-admin/database";
 import NotificationRepository from "../../repositories/notificationRepository";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
+import Chat1v1Repository from "../../repositories/chat1v1Repository";
 export class OnlineUserController {
   private readonly io: Server;
   private readonly db: Database;
   private readonly notiRepo: NotificationRepository;
+    private readonly chat1v1Repo: Chat1v1Repository;
 
-  constructor(io: Server, db: Database, notiRepo: NotificationRepository) {
+  constructor(io: Server, db: Database, notiRepo: NotificationRepository, chat1v1Repo: Chat1v1Repository) {
     this.io = io;
     this.db = db;
     this.notiRepo = notiRepo;
+    this.chat1v1Repo = chat1v1Repo;
     this.setupSocketEvents();
   }
 
@@ -24,7 +27,7 @@ export class OnlineUserController {
         return;
       }
 
-      socket.join(String(userId));
+      socket.join(`user-${String(userId)}`);
 
       await this.setUserStatus(userId, true);
 
@@ -40,7 +43,7 @@ export class OnlineUserController {
           await this.notiRepo.saveTokenNotification(Number(userId), String(token));
         }
       });
-
+      
       console.log(`🔗 Client connected: ${userId}`);
 
       socket.on("disconnect", async () => {

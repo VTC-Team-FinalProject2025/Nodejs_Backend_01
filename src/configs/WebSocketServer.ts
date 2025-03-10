@@ -20,8 +20,8 @@ class WebSocketServer {
         credentials: true,
       },
     });
-    this.onlineUserController = new OnlineUserController(this.io, db, notiRepo);
-    this.chat1v1Controller = new Chat1v1Controller(this.io, db, chat1v1Repo);
+    this.onlineUserController = new OnlineUserController(this.io, db, notiRepo, chat1v1Repo);
+    this.chat1v1Controller = new Chat1v1Controller(this.io, db, chat1v1Repo,notiRepo);
   }
 
   public broadcast(event: string, data: any) {
