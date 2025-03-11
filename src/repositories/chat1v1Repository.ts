@@ -45,6 +45,7 @@ export default class Chat1v1Repository {
       include: {
         Sender: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             loginName: true,
@@ -53,6 +54,7 @@ export default class Chat1v1Repository {
         },
         Receiver: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             loginName: true,

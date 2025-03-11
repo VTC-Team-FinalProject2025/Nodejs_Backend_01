@@ -43,15 +43,6 @@ export class Chat1v1Controller {
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
 
-      const unreadMessagesSnapshot = await this.db
-        .ref(`unreadMessages/${userId}`)
-        .once("value");
-      if (unreadMessagesSnapshot.exists()) {
-        const unreadMessages = Object.values(unreadMessagesSnapshot.val());
-        socket.emit("unreadMessages", unreadMessages);
-        await this.db.ref(`unreadMessages/${userId}`).remove();
-      }
-
       // Gửi lịch sử tin nhắn (mặc định lấy trang 1)
       const messages = await this.chat1v1Repo.getMessages(
         Number(userId),
@@ -65,33 +56,33 @@ export class Chat1v1Controller {
       socket.on("sendMessage", async (messageData) => {
         const { senderId, receiverId, message } = messageData;
         if (!senderId || !receiverId || !message) return;
-
+      
         const savedMessage = await this.chat1v1Repo.saveMessage(
           senderId,
           receiverId,
           message,
         );
+      
+        // Gửi thông báo đẩy cho người nhận
         await this.notiRepo.sendPushNotification(
           receiverId,
           `${savedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
         );
-
-
+      
+        // Cập nhật danh sách chat gần đây của người nhận
         const receiverChats = await this.chat1v1Repo.ListRecentChats(receiverId);
-
         this.io.to(`user-${receiverId}`).emit("recentChatsList", receiverChats);
-
-        // Cập nhật tin nhắn mới nhất
+      
+        // Lấy tin nhắn mới nhất
         const updatedMessages = await this.chat1v1Repo.getMessages(
           senderId,
           receiverId,
           1,
           20,
         );
-        socket.to(`chatRoom-${sortedIds[0]}-${sortedIds[1]}`).emit("chatHistory", {
-          messages: updatedMessages,
-          currentPage: 1,
-        });
+      
+        // Phát sự kiện cập nhật tin nhắn mới cho **tất cả client** trong phòng chat
+        socket.emit("chatHistory", { messages:updatedMessages, currentPage: 1 });
       });
 
       // Sự kiện tải thêm tin nhắn cũ
@@ -113,7 +104,7 @@ export class Chat1v1Controller {
 
       // Xử lý trạng thái "đang nhập"
       socket.on("typingStatus", ({ isTyping }) => {
-        this.io.to(chatRoomId).emit("userTyping", { userId, isTyping });
+        socket.to(chatRoomId).emit("userTyping", { userId, isTyping });
       });
 
       // Xử lý khi người dùng rời khỏi chat

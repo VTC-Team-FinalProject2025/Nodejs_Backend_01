@@ -7,13 +7,11 @@ export class OnlineUserController {
   private readonly io: Server;
   private readonly db: Database;
   private readonly notiRepo: NotificationRepository;
-    private readonly chat1v1Repo: Chat1v1Repository;
 
-  constructor(io: Server, db: Database, notiRepo: NotificationRepository, chat1v1Repo: Chat1v1Repository) {
+  constructor(io: Server, db: Database, notiRepo: NotificationRepository) {
     this.io = io;
     this.db = db;
     this.notiRepo = notiRepo;
-    this.chat1v1Repo = chat1v1Repo;
     this.setupSocketEvents();
   }
 
