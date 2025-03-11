@@ -93,13 +93,13 @@ export class Chat1v1Controller {
           page,
           20,
         );
-        socket.emit("moreMessages", { messages: oldMessages, page });
+        socket.emit("chatHistory", { messages: oldMessages, currentPage: page });
       });
 
       // Xác nhận đã đọc tin nhắn
-      socket.on("markAsRead", async ({ userId }) => {
-        await this.chat1v1Repo.markMessagesAsRead(userId);
-        this.io.to(chatRoomId).emit("messagesRead", { chatRoomId, userId });
+      socket.on("markAsRead", async () => {
+        await this.chat1v1Repo.markMessagesAsRead(Number(userId));
+        this.io.to(`user-${Number(userId)}`).emit("messagesRead", { userId });
       });
 
       // Xử lý trạng thái "đang nhập"
