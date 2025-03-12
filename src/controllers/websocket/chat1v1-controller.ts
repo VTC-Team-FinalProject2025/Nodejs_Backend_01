@@ -84,7 +84,7 @@ export class Chat1v1Controller {
         );
 
         // Phát sự kiện cập nhật tin nhắn mới cho **tất cả client** trong phòng chat
-        socket.emit("chatHistory", {
+        chatNamespace.to(chatRoomId).emit("chatHistory", {
           messages: updatedMessages,
           currentPage: 1,
           status: "newMessage",
@@ -99,7 +99,7 @@ export class Chat1v1Controller {
           page,
           20,
         );
-        socket.emit("chatHistory", {
+        socket.to(chatRoomId).emit("chatHistory", {
           messages: oldMessages,
           currentPage: page,
         });
@@ -141,7 +141,7 @@ export class Chat1v1Controller {
           1,
           20,
         );
-        socket.emit("chatHistory", { messages, currentPage: 1, status: "newMessage" });
+        socket.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1, status: "newMessage" });
       });
     });
   }
