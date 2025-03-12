@@ -16,6 +16,7 @@ import { db } from "./configs/firebase";
 import ChannelController from "./controllers/channel-controller";
 import UserController from "./controllers/user-controller";
 import Chat1v1Repository from "./repositories/chat1v1Repository";
+import Chat1v1Controller from "./controllers/message1v1-controller";
 import { Server } from "http";
 dotenv.config();
 
@@ -42,6 +43,7 @@ const app = new App(
     new NotificationController(notiRepo, prismaClient),
     new ChannelController(channelRepo, serverRepo),
     new UserController(userRepo),
+    new Chat1v1Controller(chat1v1Repo),
   ],
   port,
   notiRepo,
