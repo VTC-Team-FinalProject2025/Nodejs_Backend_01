@@ -1,6 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import HttpException from "../exceptions/http-exception";
-import JWTHelper from "../helpers/JWT";
+import JWTHelper, { AuthTokenPayload } from "../helpers/JWT";
 import Cookie from "../helpers/Cookie";
 import { CookieKeys } from "../constants";
 import UserRepository from "../repositories/UserRepository";
@@ -32,7 +32,7 @@ export default async function authMiddleware(
         if (refreshToken) {
             try {
               // nếu không vertify được thì sẽ throw ra error
-              const refreshPayload = JWTHelper.verifyToken(refreshToken, "REFRESH");
+              const refreshPayload = JWTHelper.verifyToken(refreshToken, "REFRESH") as AuthTokenPayload;
       
               // Tạo lại Access Token
               const newAccessToken = JWTHelper.generateToken(

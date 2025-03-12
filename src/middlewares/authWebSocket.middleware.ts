@@ -1,15 +1,15 @@
 import { Socket } from "socket.io";
 import HttpException from "../exceptions/http-exception";
-import JWTHelper from "../helpers/JWT";
+import JWTHelper, { AuthTokenPayload } from "../helpers/JWT";
 
 export default function authWebSocketMiddleware(
     socket: Socket, next: (err?: Error) => void
 ) {
     const token = socket.handshake.auth?.token;
     let tokenPayload;
-    try{
+    try {
         if (token) {
-            tokenPayload = JWTHelper.verifyToken(token, "ACCESS");
+            tokenPayload = JWTHelper.verifyToken(token, "ACCESS") as AuthTokenPayload;
             socket.data.userId = tokenPayload.userId;
             return next();
         }

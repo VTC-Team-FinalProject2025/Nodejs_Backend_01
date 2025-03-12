@@ -1,15 +1,30 @@
 import * as jwt from "jsonwebtoken";
-import { JWT_SECRET, JWT_SECRET_REFRESH, JWT_SECRET_RESET_PASSWORD } from "../constants";
+import { JWT_SECRET, JWT_SECRET_REFRESH, JWT_SECRET_RESET_PASSWORD, JWT_SERVER_ACCESS } from "../constants";
 interface TokenPayload {
     userId: number;
     [key: string]: any;
+}
+
+interface ServerAccessTokenPayload {
+    iss: string,
+    aud: "jitsi",
+    sub: "jitsi-vtc.duckdns.org",
+    room: string,
+    exp: number,
+    context: {
+        user: {
+            id: number,
+            name: string,
+            avatar: string,
+        }
+    }
 }
 
 export interface AuthTokenPayload {
     userId: number;
 }
 
-export type secretType = "ACCESS" | "REFRESH" | "RESET_PASSWORD" | "VERTIFY_EMAIL";
+export type secretType = "ACCESS" | "REFRESH" | "RESET_PASSWORD" | "VERTIFY_EMAIL" | "SERVER_ACCESS";
 
 const defaultOption = { expiresIn: 15 };
 const JWT = {
@@ -29,11 +44,13 @@ const JWT = {
                 return jwt.verify(token, JWT_SECRET_REFRESH) as TokenPayload;
             case "RESET_PASSWORD":
                 return jwt.verify(token, JWT_SECRET_RESET_PASSWORD) as TokenPayload;
+            case "SERVER_ACCESS":
+                return jwt.verify(token, JWT_SERVER_ACCESS) as ServerAccessTokenPayload;
             default:
                 return jwt.verify(token, JWT_SECRET) as TokenPayload;
         }
     },
-    generateToken: (payload: AuthTokenPayload, secretType: secretType) => {
+    generateToken: (payload: AuthTokenPayload | ServerAccessTokenPayload, secretType: secretType) => {
         switch (secretType) {
             case "ACCESS":
                 return JWT.signToken(payload, JWT_SECRET);
@@ -41,12 +58,16 @@ const JWT = {
                 return JWT.signToken(payload, JWT_SECRET);
             case "REFRESH":
                 return JWT.signToken(payload, JWT_SECRET_REFRESH, {
-                    expiresIn: 60*24*7,
+                    expiresIn: 60 * 24 * 7,
                 });
             case "RESET_PASSWORD":
                 return JWT.signToken(payload, JWT_SECRET_RESET_PASSWORD, {
                     expiresIn: 5,
-                  });
+                });
+            case "SERVER_ACCESS":
+                return JWT.signToken(payload, JWT_SERVER_ACCESS, {
+                    expiresIn: 60 * 24 * 7,
+                });
             default:
                 return JWT.signToken(payload, JWT_SECRET);
         }
