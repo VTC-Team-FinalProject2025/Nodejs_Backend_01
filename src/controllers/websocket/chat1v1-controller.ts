@@ -56,23 +56,25 @@ export class Chat1v1Controller {
       socket.on("sendMessage", async (messageData) => {
         const { senderId, receiverId, message } = messageData;
         if (!senderId || !receiverId || !message) return;
-      
+
         const savedMessage = await this.chat1v1Repo.saveMessage(
           senderId,
           receiverId,
           message,
         );
-      
+
         // Gửi thông báo đẩy cho người nhận
         await this.notiRepo.sendPushNotification(
           receiverId,
           `${savedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
         );
-      
+
         // Cập nhật danh sách chat gần đây của người nhận
-        const receiverChats = await this.chat1v1Repo.ListRecentChats(receiverId);
+        const receiverChats = await this.chat1v1Repo.ListRecentChats(
+          receiverId,
+        );
         this.io.to(`user-${receiverId}`).emit("recentChatsList", receiverChats);
-      
+
         // Lấy tin nhắn mới nhất
         const updatedMessages = await this.chat1v1Repo.getMessages(
           senderId,
@@ -80,9 +82,13 @@ export class Chat1v1Controller {
           1,
           20,
         );
-      
+
         // Phát sự kiện cập nhật tin nhắn mới cho **tất cả client** trong phòng chat
-        socket.emit("chatHistory", { messages:updatedMessages, currentPage: 1 });
+        socket.emit("chatHistory", {
+          messages: updatedMessages,
+          currentPage: 1,
+          status: "newMessage",
+        });
       });
 
       // Sự kiện tải thêm tin nhắn cũ
@@ -93,7 +99,10 @@ export class Chat1v1Controller {
           page,
           20,
         );
-        socket.emit("chatHistory", { messages: oldMessages, currentPage: page });
+        socket.emit("chatHistory", {
+          messages: oldMessages,
+          currentPage: page,
+        });
       });
 
       // Xác nhận đã đọc tin nhắn
@@ -110,6 +119,29 @@ export class Chat1v1Controller {
       // Xử lý khi người dùng rời khỏi chat
       socket.on("disconnect", async () => {
         console.log(`❌ User ${userId} disconnected`);
+      });
+
+      socket.on("deleteMessage", async ({ messageId }) => {
+        if (!messageId) return;
+
+        const message = await this.chat1v1Repo.getMessageById(messageId);
+        if (!message) return;
+
+        // Chỉ cho phép sender xoá tin nhắn
+        if (message.senderId !== Number(userId)) {
+          console.log("❌ Không thể xoá tin nhắn của người khác");
+          return;
+        }
+
+        await this.chat1v1Repo.deleteMessageById(messageId);
+
+        const messages = await this.chat1v1Repo.getMessages(
+          Number(userId),
+          Number(chatWithUserId),
+          1,
+          20,
+        );
+        socket.emit("chatHistory", { messages, currentPage: 1, status: "newMessage" });
       });
     });
   }

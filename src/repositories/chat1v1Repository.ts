@@ -171,4 +171,23 @@ export default class Chat1v1Repository {
       currentPage: page,
     };
   }
+
+  async updateMessageContent(messageId: number, newContent: string) {
+    return await  this.prisma.direct_message.update({
+      where: { id: messageId },
+      data: { content: newContent, editedAt: new Date() },
+    });
+  }
+  
+  async deleteMessageById(messageId: number) {
+    return await this.prisma.direct_message.delete({
+      where: { id: messageId },
+    });
+  }
+  
+  async getMessageById(messageId: number) {
+    return await this.prisma.direct_message.findUnique({
+      where: { id: messageId },
+    });
+  }
 }
