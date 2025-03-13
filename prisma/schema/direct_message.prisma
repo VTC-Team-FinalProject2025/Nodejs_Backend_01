@@ -2,7 +2,7 @@ model Direct_message {
   id         Int       @id @default(autoincrement())
   senderId   Int
   receiverId Int
-  content    String
+  content    String   @db.VarChar(10000)
   isRead     Boolean   @default(false)
   createdAt  DateTime  @default(now())
   editedAt   DateTime?
