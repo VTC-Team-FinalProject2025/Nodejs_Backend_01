@@ -50,7 +50,7 @@ export class Chat1v1Controller {
         1,
         20,
       );
-      socket.emit("chatHistory", { messages, currentPage: 1 });
+      chatNamespace.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1 });
 
       // Sự kiện gửi tin nhắn
       socket.on("sendMessage", async (messageData) => {
@@ -99,7 +99,7 @@ export class Chat1v1Controller {
           page,
           20,
         );
-        socket.to(chatRoomId).emit("chatHistory", {
+        chatNamespace.to(chatRoomId).emit("chatHistory", {
           messages: oldMessages,
           currentPage: page,
         });
@@ -113,7 +113,7 @@ export class Chat1v1Controller {
 
       // Xử lý trạng thái "đang nhập"
       socket.on("typingStatus", ({ isTyping }) => {
-        socket.to(chatRoomId).emit("userTyping", { userId, isTyping });
+        chatNamespace.to(chatRoomId).emit("userTyping", { userId, isTyping });
       });
 
       // Xử lý khi người dùng rời khỏi chat
@@ -141,7 +141,7 @@ export class Chat1v1Controller {
           1,
           20,
         );
-        socket.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1, status: "newMessage" });
+        chatNamespace.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1, status: "newMessage" });
       });
     });
   }
