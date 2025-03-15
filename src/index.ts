@@ -17,6 +17,7 @@ import ChannelController from "./controllers/channel-controller";
 import UserController from "./controllers/user-controller";
 import Chat1v1Repository from "./repositories/chat1v1Repository";
 import Chat1v1Controller from "./controllers/message1v1-controller";
+import ChatChannelRepository from "./repositories/chatChannelRepository";
 import { Server } from "http";
 dotenv.config();
 
@@ -28,6 +29,7 @@ const serverRepo = new ServerRepository(prismaClient);
 const channelRepo = new ChannelRepository(prismaClient);
 const notiRepo = new NotificationRepository(prismaClient);
 const chat1v1Repo = new Chat1v1Repository(prismaClient);
+const chatChanelRepo = new ChatChannelRepository(prismaClient);
 const app = new App(
   [
     new AuthController(userRepo, Passport),
@@ -48,7 +50,8 @@ const app = new App(
   port,
   notiRepo,
   chat1v1Repo,
-  userRepo
+  userRepo,
+  chatChanelRepo
 );
 
 const apps: Server = app.listen();
