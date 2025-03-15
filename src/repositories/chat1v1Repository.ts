@@ -70,11 +70,14 @@ export default class Chat1v1Repository {
     });
   }
 
-  // Đánh dấu tin nhắn đã đọc (nếu cần)
-  async markMessagesAsRead(userId: number) {
+  async markMessagesAsRead(userId: number, receiverId: number) {
     return this.prisma.direct_message.updateMany({
-      where: { receiverId: userId },
-      data: { editedAt: new Date(), isRead: true }, // Có thể dùng trường khác để đánh dấu đã đọc
+      where: {
+        senderId: receiverId,
+        receiverId: userId,
+        isRead: false
+      },
+      data: { editedAt: new Date(), isRead: true },
     });
   }
 
