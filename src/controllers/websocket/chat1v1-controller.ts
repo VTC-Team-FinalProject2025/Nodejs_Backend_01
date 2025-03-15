@@ -3,23 +3,27 @@ import { Database } from "firebase-admin/database";
 import Chat1v1Repository from "../../repositories/chat1v1Repository";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import NotificationRepository from "../../repositories/notificationRepository";
+import UserRepository from "../../repositories/UserRepository";
 
 export class Chat1v1Controller {
   private readonly io: Server;
   private readonly db: Database;
   private readonly chat1v1Repo: Chat1v1Repository;
   private readonly notiRepo: NotificationRepository;
+  private readonly userRepo: UserRepository;
 
   constructor(
     io: Server,
     db: Database,
     chat1v1Repo: Chat1v1Repository,
     notiRepo: NotificationRepository,
+    userRepo: UserRepository
   ) {
     this.io = io;
     this.db = db;
     this.chat1v1Repo = chat1v1Repo;
     this.notiRepo = notiRepo;
+    this.userRepo = userRepo;
     this.setupSocketEvents();
   }
 
@@ -42,6 +46,10 @@ export class Chat1v1Controller {
       const chatRoomId = `chatRoom-${sortedIds[0]}-${sortedIds[1]}`;
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
+
+      const InformationChatWithUserId = await this.userRepo.getUserInformationById(Number(chatWithUserId));
+
+      chatNamespace.to(chatRoomId).emit("InformationChatWithUserId", InformationChatWithUserId);
 
       socket.on("sendMessage", async (messageData) => {
         const { senderId, receiverId, message } = messageData;
