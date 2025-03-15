@@ -43,16 +43,6 @@ export class Chat1v1Controller {
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
 
-      // Gửi lịch sử tin nhắn (mặc định lấy trang 1)
-      const messages = await this.chat1v1Repo.getMessages(
-        Number(userId),
-        Number(chatWithUserId),
-        1,
-        20,
-      );
-      chatNamespace.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1 });
-
-      // Sự kiện gửi tin nhắn
       socket.on("sendMessage", async (messageData) => {
         const { senderId, receiverId, message } = messageData;
         if (!senderId || !receiverId || !message) return;
@@ -75,34 +65,7 @@ export class Chat1v1Controller {
         );
         this.io.to(`user-${receiverId}`).emit("recentChatsList", receiverChats);
 
-        // Lấy tin nhắn mới nhất
-        const updatedMessages = await this.chat1v1Repo.getMessages(
-          senderId,
-          receiverId,
-          1,
-          20,
-        );
-
-        // Phát sự kiện cập nhật tin nhắn mới cho **tất cả client** trong phòng chat
-        chatNamespace.to(chatRoomId).emit("chatHistory", {
-          messages: updatedMessages,
-          currentPage: 1,
-          status: "newMessage",
-        });
-      });
-
-      // Sự kiện tải thêm tin nhắn cũ
-      socket.on("loadMoreMessages", async ({ page }) => {
-        const oldMessages = await this.chat1v1Repo.getMessages(
-          Number(userId),
-          Number(chatWithUserId),
-          page,
-          20,
-        );
-        chatNamespace.to(chatRoomId).emit("chatHistory", {
-          messages: oldMessages,
-          currentPage: page,
-        });
+        chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
       });
 
       // Xác nhận đã đọc tin nhắn
@@ -135,13 +98,7 @@ export class Chat1v1Controller {
 
         await this.chat1v1Repo.deleteMessageById(messageId);
 
-        const messages = await this.chat1v1Repo.getMessages(
-          Number(userId),
-          Number(chatWithUserId),
-          1,
-          20,
-        );
-        chatNamespace.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1, status: "newMessage" });
+        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id );
       });
     });
   }
