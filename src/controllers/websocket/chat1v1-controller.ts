@@ -78,7 +78,7 @@ export class Chat1v1Controller {
 
       // Xác nhận đã đọc tin nhắn
       socket.on("markAsRead", async () => {
-        await this.chat1v1Repo.markMessagesAsRead(Number(userId));
+        await this.chat1v1Repo.markMessagesAsRead(Number(userId), Number(chatWithUserId));
         this.io.to(`user-${Number(userId)}`).emit("messagesRead", { userId });
       });
 
