@@ -48,6 +48,7 @@ const app = new App(
   port,
   notiRepo,
   chat1v1Repo,
+  userRepo
 );
 
 const apps: Server = app.listen();

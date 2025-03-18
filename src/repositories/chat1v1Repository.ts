@@ -31,7 +31,12 @@ export default class Chat1v1Repository {
     });
   }
 
-  async getMessages(senderId: number, receiverId: number, page: number = 1, pageSize: number = 20) {
+  async getMessages(
+    senderId: number,
+    receiverId: number,
+    page: number = 1,
+    pageSize: number = 20,
+  ) {
     return this.prisma.direct_message.findMany({
       where: {
         OR: [
@@ -39,9 +44,9 @@ export default class Chat1v1Repository {
           { senderId: receiverId, receiverId: senderId },
         ],
       },
-      orderBy: { createdAt: "desc" }, 
-      skip: (page - 1) * pageSize, 
-      take: pageSize, 
+      orderBy: { createdAt: "desc" },
+      skip: (page - 1) * pageSize,
+      take: pageSize,
       include: {
         Sender: {
           select: {
@@ -65,17 +70,24 @@ export default class Chat1v1Repository {
     });
   }
 
-  // Đánh dấu tin nhắn đã đọc (nếu cần)
-  async markMessagesAsRead(userId: number) {
+  async markMessagesAsRead(userId: number, receiverId: number) {
     return this.prisma.direct_message.updateMany({
-      where: { receiverId: userId },
-      data: { editedAt: new Date(), isRead: true }, // Có thể dùng trường khác để đánh dấu đã đọc
+      where: {
+        senderId: receiverId,
+        receiverId: userId,
+        isRead: false
+      },
+      data: { editedAt: new Date(), isRead: true },
     });
   }
 
-  async ListRecentChats(userId: number, page: number = 1, pageSize: number = 20) {
+  async ListRecentChats(
+    userId: number,
+    page: number = 1,
+    pageSize: number = 20,
+  ) {
     const skip = (page - 1) * pageSize;
-  
+
     // Lấy danh sách các cuộc trò chuyện gần đây
     const recentChats = await this.prisma.direct_message.findMany({
       where: {
@@ -106,23 +118,24 @@ export default class Chat1v1Repository {
         },
       },
     });
-  
+
     const uniqueUsers = new Map<number, any>();
-  
+
     for (const msg of recentChats) {
       const chatPartner = msg.senderId === userId ? msg.Receiver : msg.Sender;
       if (!chatPartner) continue;
-  
+
       if (!uniqueUsers.has(chatPartner.id)) {
         uniqueUsers.set(chatPartner.id, {
           ...chatPartner,
           unreadCount: 0,
-          latestMessage: null, 
+          latestMessage: null,
           latestMessageRead: true,
+          latestMessageSenderId: null,
         });
       }
     }
-  
+
     const unreadCounts = await this.prisma.direct_message.groupBy({
       by: ["senderId"],
       where: {
@@ -133,37 +146,46 @@ export default class Chat1v1Repository {
         _all: true,
       },
     });
-  
+
     unreadCounts.forEach((unread) => {
       if (uniqueUsers.has(unread.senderId)) {
         uniqueUsers.get(unread.senderId).unreadCount = unread._count._all;
       }
     });
-  
-    const latestMessages = await this.prisma.direct_message.findMany({
-      where: {
-        OR: [{ senderId: userId }, { receiverId: userId }],
-      },
-      orderBy: { createdAt: "desc" },
-      distinct: ["senderId", "receiverId"],
-      take: pageSize,
-      select: {
-        senderId: true,
-        receiverId: true,
-        content: true,
-        isRead: true,
-        createdAt: true,
-      },
-    });
-  
+
+    const latestMessages = await Promise.all(
+      Array.from(uniqueUsers.keys()).map(async (chatPartnerId) => {
+        return this.prisma.direct_message.findFirst({
+          where: {
+            OR: [
+              { senderId: userId, receiverId: chatPartnerId },
+              { senderId: chatPartnerId, receiverId: userId },
+            ],
+          },
+          orderBy: { createdAt: "desc" },
+          select: {
+            senderId: true,
+            receiverId: true,
+            content: true,
+            isRead: true,
+            createdAt: true,
+          },
+        });
+      }),
+    );
+
     latestMessages.forEach((msg) => {
-      const chatPartnerId = msg.senderId === userId ? msg.receiverId : msg.senderId;
-      if (uniqueUsers.has(chatPartnerId)) {
-        uniqueUsers.get(chatPartnerId).latestMessage = msg.content;
-        uniqueUsers.get(chatPartnerId).latestMessageRead = msg.isRead;
+      if (msg) {
+        const chatPartnerId =
+          msg.senderId === userId ? msg.receiverId : msg.senderId;
+        if (uniqueUsers.has(chatPartnerId)) {
+          uniqueUsers.get(chatPartnerId).latestMessage = msg.content;
+          uniqueUsers.get(chatPartnerId).latestMessageRead = msg.isRead;
+          uniqueUsers.get(chatPartnerId).latestMessageSenderId = msg.senderId;
+        }
       }
     });
-  
+
     return {
       users: Array.from(uniqueUsers.values()),
       totalUsers: uniqueUsers.size,
@@ -173,18 +195,18 @@ export default class Chat1v1Repository {
   }
 
   async updateMessageContent(messageId: number, newContent: string) {
-    return await  this.prisma.direct_message.update({
+    return await this.prisma.direct_message.update({
       where: { id: messageId },
       data: { content: newContent, editedAt: new Date() },
     });
   }
-  
+
   async deleteMessageById(messageId: number) {
     return await this.prisma.direct_message.delete({
       where: { id: messageId },
     });
   }
-  
+
   async getMessageById(messageId: number) {
     return await this.prisma.direct_message.findUnique({
       where: { id: messageId },

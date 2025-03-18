@@ -5,7 +5,11 @@ import { Chat1v1Controller } from "../controllers/websocket/chat1v1-controller";
 import NotificationRepository from "../repositories/notificationRepository";
 import { db } from "./firebase";
 import Chat1v1Repository from "../repositories/chat1v1Repository";
+<<<<<<< HEAD
 import { ServerController } from "../controllers/websocket/server-controller";
+=======
+import UserRepository from "../repositories/UserRepository";
+>>>>>>> 8242a9e841e571d1d449bba692afe998aa2a004f
 
 class WebSocketServer {
   private readonly io: Server;
@@ -13,7 +17,7 @@ class WebSocketServer {
   private readonly chat1v1Controller: Chat1v1Controller;
   private readonly roomController: ServerController;
 
-  constructor(httpServer: HTTPServer, notiRepo: NotificationRepository, chat1v1Repo: Chat1v1Repository) {
+  constructor(httpServer: HTTPServer, notiRepo: NotificationRepository, chat1v1Repo: Chat1v1Repository, userRepo: UserRepository) {
     this.io = new Server(httpServer, {
       cors: {
         origin: "*",
@@ -23,8 +27,8 @@ class WebSocketServer {
       },
     });
     this.onlineUserController = new OnlineUserController(this.io, db, notiRepo);
-    this.chat1v1Controller = new Chat1v1Controller(this.io, db, chat1v1Repo, notiRepo);
     this.roomController = new ServerController(this.io, db);
+    this.chat1v1Controller = new Chat1v1Controller(this.io, db, chat1v1Repo, notiRepo, userRepo);
   }
 
   public broadcast(event: string, data: any) {

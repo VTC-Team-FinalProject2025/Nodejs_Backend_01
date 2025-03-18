@@ -16,6 +16,7 @@ export default class Message1v1Controller extends BaseController {
   public initializeRoutes() {
     this.router.use(authMiddleware);
     this.router.get("/list-recent-chats", this.ListRecentChats);
+    this.router.get("/list-chats", this.ListChats);
   }
 
   private readonly ListRecentChats = async (
@@ -34,6 +35,27 @@ export default class Message1v1Controller extends BaseController {
         Number(pageSize)
       );
       response.json(recentChats);
+    } catch (error) {
+      next(error);
+    }
+  };
+  private readonly ListChats = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    try {
+      const { userId } = request.user;
+      const { page = 1, limit = 20, receiverId } = request.query;
+      const pageSize = Number(limit);
+
+      const messages = await this.chat1v1Repo.getMessages(
+        Number(userId),
+        Number(receiverId),
+        Number(page),
+        pageSize
+      );
+      response.json(messages);
     } catch (error) {
       next(error);
     }

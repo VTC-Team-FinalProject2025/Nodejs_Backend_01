@@ -3,23 +3,27 @@ import { Database } from "firebase-admin/database";
 import Chat1v1Repository from "../../repositories/chat1v1Repository";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import NotificationRepository from "../../repositories/notificationRepository";
+import UserRepository from "../../repositories/UserRepository";
 
 export class Chat1v1Controller {
   private readonly io: Server;
   private readonly db: Database;
   private readonly chat1v1Repo: Chat1v1Repository;
   private readonly notiRepo: NotificationRepository;
+  private readonly userRepo: UserRepository;
 
   constructor(
     io: Server,
     db: Database,
     chat1v1Repo: Chat1v1Repository,
     notiRepo: NotificationRepository,
+    userRepo: UserRepository
   ) {
     this.io = io;
     this.db = db;
     this.chat1v1Repo = chat1v1Repo;
     this.notiRepo = notiRepo;
+    this.userRepo = userRepo;
     this.setupSocketEvents();
   }
 
@@ -43,16 +47,10 @@ export class Chat1v1Controller {
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
 
-      // Gửi lịch sử tin nhắn (mặc định lấy trang 1)
-      const messages = await this.chat1v1Repo.getMessages(
-        Number(userId),
-        Number(chatWithUserId),
-        1,
-        20,
-      );
-      chatNamespace.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1 });
+      const InformationChatWithUserId = await this.userRepo.getUserInformationById(Number(chatWithUserId));
 
-      // Sự kiện gửi tin nhắn
+      chatNamespace.to(chatRoomId).emit("InformationChatWithUserId", InformationChatWithUserId);
+
       socket.on("sendMessage", async (messageData) => {
         const { senderId, receiverId, message } = messageData;
         if (!senderId || !receiverId || !message) return;
@@ -75,39 +73,12 @@ export class Chat1v1Controller {
         );
         this.io.to(`user-${receiverId}`).emit("recentChatsList", receiverChats);
 
-        // Lấy tin nhắn mới nhất
-        const updatedMessages = await this.chat1v1Repo.getMessages(
-          senderId,
-          receiverId,
-          1,
-          20,
-        );
-
-        // Phát sự kiện cập nhật tin nhắn mới cho **tất cả client** trong phòng chat
-        chatNamespace.to(chatRoomId).emit("chatHistory", {
-          messages: updatedMessages,
-          currentPage: 1,
-          status: "newMessage",
-        });
-      });
-
-      // Sự kiện tải thêm tin nhắn cũ
-      socket.on("loadMoreMessages", async ({ page }) => {
-        const oldMessages = await this.chat1v1Repo.getMessages(
-          Number(userId),
-          Number(chatWithUserId),
-          page,
-          20,
-        );
-        chatNamespace.to(chatRoomId).emit("chatHistory", {
-          messages: oldMessages,
-          currentPage: page,
-        });
+        chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
       });
 
       // Xác nhận đã đọc tin nhắn
       socket.on("markAsRead", async () => {
-        await this.chat1v1Repo.markMessagesAsRead(Number(userId));
+        await this.chat1v1Repo.markMessagesAsRead(Number(userId), Number(chatWithUserId));
         this.io.to(`user-${Number(userId)}`).emit("messagesRead", { userId });
       });
 
@@ -135,13 +106,7 @@ export class Chat1v1Controller {
 
         await this.chat1v1Repo.deleteMessageById(messageId);
 
-        const messages = await this.chat1v1Repo.getMessages(
-          Number(userId),
-          Number(chatWithUserId),
-          1,
-          20,
-        );
-        chatNamespace.to(chatRoomId).emit("chatHistory", { messages, currentPage: 1, status: "newMessage" });
+        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id );
       });
     });
   }
