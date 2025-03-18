@@ -25,7 +25,7 @@ const prismaClient = new PrismaClient();
 const userRepo = new UserRepository(prismaClient);
 const friendShipRepo = new FriendShipRepository(prismaClient);
 const serverRepo = new ServerRepository(prismaClient);
-const channelRepo = new ChannelRepository(prismaClient);
+const channelRepo = new ChannelRepository(prismaClient, db);
 const notiRepo = new NotificationRepository(prismaClient);
 const chat1v1Repo = new Chat1v1Repository(prismaClient);
 const app = new App(
@@ -41,7 +41,7 @@ const app = new App(
     ),
     new ServerController(serverRepo, channelRepo, prismaClient),
     new NotificationController(notiRepo, prismaClient),
-    new ChannelController(channelRepo, serverRepo),
+    new ChannelController(channelRepo, serverRepo, userRepo),
     new UserController(userRepo),
     new Chat1v1Controller(chat1v1Repo),
   ],

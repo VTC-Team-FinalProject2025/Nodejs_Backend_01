@@ -13,6 +13,7 @@ import { InviteLinkSchema } from "../schemas/server";
 import CookieHelper from "../helpers/Cookie";
 import JWT from "../helpers/JWT";
 import UserRepository from "../repositories/UserRepository";
+import { channel } from "diagnostics_channel";
 
 export default class FileController extends BaseController {
   private serverRepo: ServerRepository;
@@ -91,26 +92,14 @@ export default class FileController extends BaseController {
       if (!server.Members.find(async (member) => member.User.id === userId)) {
         return next(new HttpException(403, "You are not a member of this server"));
       };
-
-      const user = await this.userRepo.getUserById(userId);
-      if (!user) return next(new HttpException(404, "User not found"));
-
-      let token = JWT.generateToken({
-        iss: "jitsi",
-        aud: "jitsi",
-        sub: "jitsi-vtc.duckdns.org",
-        room: server.name,
-        exp: Math.floor(Date.now() / 1000) + (60 * 60), // 1 hour
-        context: {
-          user: {
-            id: userId,
-            name: user.loginName,
-            avatar: user.avatarUrl || "https://robohash.org/" + user.loginName,
-          }
+      let Channels = await this.channelRepo.getChannelsByServerId(Number(id));
+      Channels = Channels.map((channel) => {
+        if (channel.password) {
+          channel.password = true;
         }
-      }, "SERVER_ACCESS");
-      CookieHelper.setCookie("serverId", token, res);
-      res.status(200).json(server);
+        return channel;
+      });
+      res.status(200).json({ ...server, Channels: Channels });
     } catch (error) {
       new HttpException(500, "Failed to retrieve server");
     }
