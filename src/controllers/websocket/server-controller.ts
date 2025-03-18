@@ -24,6 +24,7 @@ export class ServerController {
             console.log(`🔗 User ${userId} connected`);
 
             const handleOnJoinServer = async ({ serverId }: { serverId: string }) => {
+
                 socket.join(serverId);
                 console.log(`✅ User ${userId} joined server ${serverId}`);
                 const handleOnJoinChannel = async ({ channelId, loginName, isMicMuted, avatarUrl }: {
@@ -36,6 +37,7 @@ export class ServerController {
                         console.log("❌ Missing required data in joinRoom");
                         return;
                     }
+
                     // remove user from all channels before joining new channel
                     await this.channelRepo.handleRemoveUserFromChannel(
                         {
@@ -78,12 +80,14 @@ export class ServerController {
 
                 const handleOnLeaveChannel = async ({ channelId }: { channelId: string }) => {
                     console.log(`❌ User ${userId} left room ${channelId}`);
-
-                    // Xóa user khỏi danh sách tham gia phòng trong Firebase
-                    await this.db.ref(`channels/${channelId}/participants/${userId}`).remove();
+                    this.channelRepo.handleRemoveUserFromChannel({ userId, callback: (channelId) => roomNamespace.to(serverId).emit("userLeft", { userId, channelId }) });
+                    // // Xóa danh sách các channel mà user đang tham gia
+                    // await this.db.ref(`users/${userId}/channels`).remove();
+                    // // Xóa user khỏi danh sách tham gia phòng trong Firebase
+                    // await this.db.ref(`channels/${channelId}/participants/${userId}`).remove();
 
                     // Gửi thông báo đến các thành viên khác
-                    roomNamespace.to(serverId).emit("userLeft", { userId, channelId });
+                    // roomNamespace.to(serverId).emit("userLeft", { userId, channelId });
                 }
 
                 const handleOnToggleMic = async ({ channelId, isMicMuted }: { channelId: string, isMicMuted: boolean }) => {
@@ -106,14 +110,13 @@ export class ServerController {
                 }
 
                 const handleOnLeaveServer = async ({ serverId }: { serverId: string }) => {
-                    socket.leave(serverId);
-                    socket.off("leaveChannel", handleOnLeaveChannel);
-                    socket.off("toggleMic", handleOnToggleMic);
-                    socket.off("toggleVideo", handleOnToggleVideo);
-                    socket.off("toggleShareScreen", handleOnShareScreen);
-                    socket.off("leaveServer", handleOnLeaveServer);
-                    socket.off("disconnect", handleOnDisconnect);
-                    console.log(`❌ User ${userId} left server ${serverId}`);
+                    socket.removeAllListeners("leaveChannel")
+                    socket.removeAllListeners("joinChannel")
+                    socket.removeAllListeners("toggleMic")
+                    socket.removeAllListeners("toggleVideo")
+                    socket.removeAllListeners("toggleShareScreen")
+                    socket.removeAllListeners("leaveServer")
+                    socket.removeAllListeners("disconnect")
                     await this.channelRepo.handleRemoveUserFromChannel(
                         {
                             userId,
@@ -123,7 +126,9 @@ export class ServerController {
                         }
                     );
                     // Xóa danh sách các channel mà user đang tham gia
-                    await this.db.ref(`users/${userId}/channels`).remove();
+                    // await this.db.ref(`users/${userId}/channels`).remove();
+                    socket.leave(serverId);
+                    console.log(`❌ User ${userId} left server ${serverId}`);
                     // ✨ Xóa tất cả các listener để tránh memory leak
                 }
 
@@ -139,7 +144,7 @@ export class ServerController {
                         }
                     );
                     // Xóa danh sách các channel mà user đang tham gia
-                    this.db.ref(`users/${userId}/channels`).remove();
+                    // this.db.ref(`users/${userId}/channels`).remove();
                     socket.leave(serverId);
                 }
 

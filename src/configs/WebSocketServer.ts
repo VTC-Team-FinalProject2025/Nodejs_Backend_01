@@ -5,11 +5,8 @@ import { Chat1v1Controller } from "../controllers/websocket/chat1v1-controller";
 import NotificationRepository from "../repositories/notificationRepository";
 import { db } from "./firebase";
 import Chat1v1Repository from "../repositories/chat1v1Repository";
-<<<<<<< HEAD
 import { ServerController } from "../controllers/websocket/server-controller";
-=======
 import UserRepository from "../repositories/UserRepository";
->>>>>>> 8242a9e841e571d1d449bba692afe998aa2a004f
 
 class WebSocketServer {
   private readonly io: Server;

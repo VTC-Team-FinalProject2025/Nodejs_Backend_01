@@ -114,5 +114,6 @@ export default class ChannelRepository {
         await this.db.ref(`channels/${channelId}/participants/${userId}`).remove();
       }
     }
+    await this.db.ref(`users/${userId}/channels`).remove();
   }
 } 
