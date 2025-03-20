@@ -15,13 +15,14 @@ export class ChatChannelController {
   ) {
     this.io = io;
     this.chatChanelRepo = chatChanelRepo;
-    (this.notiRepo = notiRepo), this.setupSocketEvents();
+    (this.notiRepo = notiRepo), 
+    this.setupSocketEvents();
   }
 
   private setupSocketEvents() {
-    this.io.use(authWebSocketMiddleware);
     const chatNamespace = this.io.of("/chat-channel");
-    chatNamespace.on("connect", async (socket: Socket) => {
+    chatNamespace.use(authWebSocketMiddleware);
+    chatNamespace.on("connect-channel", async (socket: Socket) => {
       const userId = String(socket.data.userId);
       const channelId = String(socket.handshake.auth?.channelId);
       console.log("channelId",userId, channelId)
