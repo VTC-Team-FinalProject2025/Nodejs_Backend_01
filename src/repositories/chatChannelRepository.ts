@@ -24,16 +24,14 @@ export default class ChatChannelRepository {
   }
 
   async getMessages(
-    senderId: number,
-    receiverId: number,
+    channelId: number,
     page: number = 1,
     pageSize: number = 20,
   ) {
-    return this.prisma.direct_message.findMany({
+    return this.prisma.message.findMany({
       where: {
         OR: [
-          { senderId, receiverId },
-          { senderId: receiverId, receiverId: senderId },
+          { channelId },
         ],
       },
       orderBy: { createdAt: "desc" },
@@ -41,15 +39,6 @@ export default class ChatChannelRepository {
       take: pageSize,
       include: {
         Sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            loginName: true,
-            avatarUrl: true,
-          },
-        },
-        Receiver: {
           select: {
             id: true,
             firstName: true,

@@ -28,8 +28,8 @@ export class Chat1v1Controller {
   }
 
   private setupSocketEvents() {
+    this.io.use(authWebSocketMiddleware);
     const chatNamespace = this.io.of("/chat1v1");
-    chatNamespace.use(authWebSocketMiddleware);
     chatNamespace.on("connect", async (socket: Socket) => {
       const userId = String(socket.data.userId);
       const chatWithUserId = String(

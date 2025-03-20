@@ -18,6 +18,7 @@ import UserController from "./controllers/user-controller";
 import Chat1v1Repository from "./repositories/chat1v1Repository";
 import Chat1v1Controller from "./controllers/message1v1-controller";
 import ChatChannelRepository from "./repositories/chatChannelRepository";
+import ChatMessageController from "./controllers/messagechanel-controller";
 import { Server } from "http";
 dotenv.config();
 
@@ -46,6 +47,7 @@ const app = new App(
     new ChannelController(channelRepo, serverRepo),
     new UserController(userRepo),
     new Chat1v1Controller(chat1v1Repo),
+    new ChatMessageController(chatChanelRepo)
   ],
   port,
   notiRepo,

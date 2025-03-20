@@ -22,8 +22,9 @@ export class ChatChannelController {
     this.io.use(authWebSocketMiddleware);
     const chatNamespace = this.io.of("/chat-channel");
     chatNamespace.on("connect", async (socket: Socket) => {
-      const userId = Number(socket.data.userId);
-      const channelId = Number(socket.handshake.auth?.channelId);
+      const userId = String(socket.data.userId);
+      const channelId = String(socket.handshake.auth?.channelId);
+      console.log("channelId",userId, channelId)
 
       if (!userId || !channelId) {
         console.log("❌ Connection rejected: Missing userId or channelId");
@@ -38,8 +39,8 @@ export class ChatChannelController {
         const { message } = messageData;
         if (!message) return;
         const savedMessage = await this.chatChanelRepo.saveMessage(
-          userId,
-          channelId,
+          Number(userId),
+          Number(channelId),
           message,
         );
 
@@ -49,7 +50,7 @@ export class ChatChannelController {
       socket.on("deleteMessage", async ({ messageId }) => {
         if (!messageId) return;
 
-        const message = await this.chatChanelRepo.getMessageById(messageId, channelId);
+        const message = await this.chatChanelRepo.getMessageById(messageId, Number(channelId));
         if (!message) return;
 
         // Chỉ cho phép sender xoá tin nhắn

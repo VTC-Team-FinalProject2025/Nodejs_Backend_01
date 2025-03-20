@@ -1,0 +1,10 @@
+model MessageReadChannel {
+  userId    Int
+  messageId Int
+  readAt    DateTime @default(now())
+
+  User    Users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@id([userId, messageId])
+}
