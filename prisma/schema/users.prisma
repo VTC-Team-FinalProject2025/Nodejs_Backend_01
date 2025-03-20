@@ -29,5 +29,7 @@ model Users {
 
   tokens TokenNotification[]
 
+  Readers MessageReadChannel[] 
+
   @@map("users")
 }

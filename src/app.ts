@@ -12,6 +12,7 @@ import { URL_CLIENT } from "./constants";
 import NotificationRepository from "./repositories/notificationRepository";
 import Chat1v1Repository from "./repositories/chat1v1Repository";
 import UserRepository from "./repositories/UserRepository";
+import ChatChannelRepository from "./repositories/chatChannelRepository";
 class App {
   public app: express.Application;
   public port: number | string;
@@ -23,7 +24,8 @@ class App {
     port: number | string,
     notiRepo: NotificationRepository,
     chat1v1Repo: Chat1v1Repository,
-    userRepo: UserRepository
+    userRepo: UserRepository,
+    chatChanelRepo: ChatChannelRepository
   ) {
     this.app = express();
     this.port = port;
@@ -38,7 +40,8 @@ class App {
       this.httpServer,
       notiRepo,
       chat1v1Repo,
-      userRepo
+      userRepo,
+      chatChanelRepo
     );
   }
 
