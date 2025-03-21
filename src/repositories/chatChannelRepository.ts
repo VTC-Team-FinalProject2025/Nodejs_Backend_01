@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { decrypt } from "../helpers/Encryption";
 
 export default class ChatChannelRepository {
   public prisma: PrismaClient;
@@ -28,7 +29,7 @@ export default class ChatChannelRepository {
     page: number = 1,
     pageSize: number = 20,
   ) {
-    return this.prisma.message.findMany({
+    const messages = await this.prisma.message.findMany({
       where: {
         OR: [
           { channelId },
@@ -49,6 +50,10 @@ export default class ChatChannelRepository {
         },
       },
     });
+    return messages.map((msg) => ({
+      ...msg,
+      content: decrypt(msg.content),
+    }));
   }
 
   async markMessagesAsRead(userId: number, receiverId: number) {
