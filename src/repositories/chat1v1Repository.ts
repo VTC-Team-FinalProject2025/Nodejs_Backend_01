@@ -1,4 +1,5 @@
 import { PrismaClient } from "@prisma/client";
+import { decrypt } from "../helpers/Encryption";
 
 export default class Chat1v1Repository {
   public prisma: PrismaClient;
@@ -37,7 +38,7 @@ export default class Chat1v1Repository {
     page: number = 1,
     pageSize: number = 20,
   ) {
-    return this.prisma.direct_message.findMany({
+    const messages = await this.prisma.direct_message.findMany({
       where: {
         OR: [
           { senderId, receiverId },
@@ -68,6 +69,10 @@ export default class Chat1v1Repository {
         },
       },
     });
+    return messages.map((msg) => ({
+      ...msg,
+      content: decrypt(msg.content),
+    }));
   }
 
   async markMessagesAsRead(userId: number, receiverId: number) {
@@ -75,7 +80,7 @@ export default class Chat1v1Repository {
       where: {
         senderId: receiverId,
         receiverId: userId,
-        isRead: false
+        isRead: false,
       },
       data: { editedAt: new Date(), isRead: true },
     });
@@ -179,7 +184,7 @@ export default class Chat1v1Repository {
         const chatPartnerId =
           msg.senderId === userId ? msg.receiverId : msg.senderId;
         if (uniqueUsers.has(chatPartnerId)) {
-          uniqueUsers.get(chatPartnerId).latestMessage = msg.content;
+          uniqueUsers.get(chatPartnerId).latestMessage = decrypt(msg.content);
           uniqueUsers.get(chatPartnerId).latestMessageRead = msg.isRead;
           uniqueUsers.get(chatPartnerId).latestMessageSenderId = msg.senderId;
         }
