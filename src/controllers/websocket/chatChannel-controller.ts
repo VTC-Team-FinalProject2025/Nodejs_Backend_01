@@ -2,12 +2,14 @@ import { Server, Socket } from "socket.io";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import ChatChannelRepository from "../../repositories/chatChannelRepository";
 import NotificationRepository from "../../repositories/notificationRepository";
-import {encrypt} from '../../helpers/Encryption'
+import { encrypt } from "../../helpers/Encryption";
+import PQueue from "p-queue";
 
 export class ChatChannelController {
   private readonly io: Server;
   private readonly chatChanelRepo: ChatChannelRepository;
   private readonly notiRepo: NotificationRepository;
+  private readonly messageQueue: PQueue;
 
   constructor(
     io: Server,
@@ -16,7 +18,8 @@ export class ChatChannelController {
   ) {
     this.io = io;
     this.chatChanelRepo = chatChanelRepo;
-    (this.notiRepo = notiRepo), 
+    (this.notiRepo = notiRepo),
+      (this.messageQueue = new PQueue({ concurrency: 1 }));
     this.setupSocketEvents();
   }
 
@@ -36,22 +39,27 @@ export class ChatChannelController {
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
       socket.on("sendMessage", async (messageData) => {
-        const { message } = messageData;
-        if (!message) return;
-        const encrypted = encrypt(message);
-        const savedMessage = await this.chatChanelRepo.saveMessage(
-          Number(userId),
-          Number(channelId),
-          String(encrypted),
-        );
+        this.messageQueue.add(async () => {
+          const { message } = messageData;
+          if (!message) return;
+          const encrypted = encrypt(message);
+          const savedMessage = await this.chatChanelRepo.saveMessage(
+            Number(userId),
+            Number(channelId),
+            String(encrypted),
+          );
 
-        chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
+          chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
+        });
       });
 
       socket.on("deleteMessage", async ({ messageId }) => {
         if (!messageId) return;
 
-        const message = await this.chatChanelRepo.getMessageById(messageId, Number(channelId));
+        const message = await this.chatChanelRepo.getMessageById(
+          messageId,
+          Number(channelId),
+        );
         if (!message) return;
 
         // Chỉ cho phép sender xoá tin nhắn
@@ -62,7 +70,7 @@ export class ChatChannelController {
 
         await this.chatChanelRepo.deleteMessageById(messageId);
 
-        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id );
+        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id);
       });
     });
   }

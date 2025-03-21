@@ -5,6 +5,7 @@ import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware"
 import NotificationRepository from "../../repositories/notificationRepository";
 import UserRepository from "../../repositories/UserRepository";
 import { encrypt } from "../../helpers/Encryption";
+import PQueue from "p-queue";
 
 export class Chat1v1Controller {
   private readonly io: Server;
@@ -12,19 +13,21 @@ export class Chat1v1Controller {
   private readonly chat1v1Repo: Chat1v1Repository;
   private readonly notiRepo: NotificationRepository;
   private readonly userRepo: UserRepository;
+  private readonly messageQueue: PQueue;
 
   constructor(
     io: Server,
     db: Database,
     chat1v1Repo: Chat1v1Repository,
     notiRepo: NotificationRepository,
-    userRepo: UserRepository
+    userRepo: UserRepository,
   ) {
     this.io = io;
     this.db = db;
     this.chat1v1Repo = chat1v1Repo;
     this.notiRepo = notiRepo;
     this.userRepo = userRepo;
+    this.messageQueue = new PQueue({ concurrency: 1 });
     this.setupSocketEvents();
   }
 
@@ -48,38 +51,46 @@ export class Chat1v1Controller {
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
 
-      const InformationChatWithUserId = await this.userRepo.getUserInformationById(Number(chatWithUserId));
+      const InformationChatWithUserId =
+        await this.userRepo.getUserInformationById(Number(chatWithUserId));
 
-      chatNamespace.to(chatRoomId).emit("InformationChatWithUserId", InformationChatWithUserId);
+      chatNamespace
+        .to(chatRoomId)
+        .emit("InformationChatWithUserId", InformationChatWithUserId);
 
       socket.on("sendMessage", async (messageData) => {
-        const { senderId, receiverId, message } = messageData;
-        if (!senderId || !receiverId || !message) return;
-        const encrypted = encrypt(message);
-        const savedMessage = await this.chat1v1Repo.saveMessage(
-          senderId,
-          receiverId,
-          String(encrypted),
-        );
+        this.messageQueue.add(async () => {
+          const { senderId, receiverId, message } = messageData;
+          if (!senderId || !receiverId || !message) return;
+          const encrypted = encrypt(message);
+          const savedMessage = await this.chat1v1Repo.saveMessage(
+            senderId,
+            receiverId,
+            String(encrypted),
+          );
 
-        // Gửi thông báo đẩy cho người nhận
-        await this.notiRepo.sendPushNotification(
-          receiverId,
-          `${savedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
-        );
+          await this.notiRepo.sendPushNotification(
+            receiverId,
+            `${savedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
+          );
 
-        // Cập nhật danh sách chat gần đây của người nhận
-        const receiverChats = await this.chat1v1Repo.ListRecentChats(
-          receiverId,
-        );
-        this.io.to(`user-${receiverId}`).emit("recentChatsList", receiverChats);
+          const receiverChats = await this.chat1v1Repo.ListRecentChats(
+            receiverId,
+          );
+          this.io
+            .to(`user-${receiverId}`)
+            .emit("recentChatsList", receiverChats);
 
-        chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
+          chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
+        });
       });
 
       // Xác nhận đã đọc tin nhắn
       socket.on("markAsRead", async () => {
-        await this.chat1v1Repo.markMessagesAsRead(Number(userId), Number(chatWithUserId));
+        await this.chat1v1Repo.markMessagesAsRead(
+          Number(userId),
+          Number(chatWithUserId),
+        );
         this.io.to(`user-${Number(userId)}`).emit("messagesRead", { userId });
       });
 
@@ -107,7 +118,7 @@ export class Chat1v1Controller {
 
         await this.chat1v1Repo.deleteMessageById(messageId);
 
-        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id );
+        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id);
       });
     });
   }
