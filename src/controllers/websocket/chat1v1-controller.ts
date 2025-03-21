@@ -4,6 +4,7 @@ import Chat1v1Repository from "../../repositories/chat1v1Repository";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import NotificationRepository from "../../repositories/notificationRepository";
 import UserRepository from "../../repositories/UserRepository";
+import { encrypt } from "../../helpers/Encryption";
 
 export class Chat1v1Controller {
   private readonly io: Server;
@@ -54,11 +55,11 @@ export class Chat1v1Controller {
       socket.on("sendMessage", async (messageData) => {
         const { senderId, receiverId, message } = messageData;
         if (!senderId || !receiverId || !message) return;
-
+        const encrypted = encrypt(message);
         const savedMessage = await this.chat1v1Repo.saveMessage(
           senderId,
           receiverId,
-          message,
+          String(encrypted),
         );
 
         // Gửi thông báo đẩy cho người nhận

@@ -2,6 +2,7 @@ import { Server, Socket } from "socket.io";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import ChatChannelRepository from "../../repositories/chatChannelRepository";
 import NotificationRepository from "../../repositories/notificationRepository";
+import {encrypt} from '../../helpers/Encryption'
 
 export class ChatChannelController {
   private readonly io: Server;
@@ -22,27 +23,26 @@ export class ChatChannelController {
   private setupSocketEvents() {
     const chatNamespace = this.io.of("/chat-channel");
     chatNamespace.use(authWebSocketMiddleware);
-    chatNamespace.on("connect-channel", async (socket: Socket) => {
+    chatNamespace.on("connect", async (socket: Socket) => {
       const userId = String(socket.data.userId);
       const channelId = String(socket.handshake.auth?.channelId);
-      console.log("channelId",userId, channelId)
 
       if (!userId || !channelId) {
         console.log("❌ Connection rejected: Missing userId or channelId");
         socket.disconnect();
         return;
       }
-      const sortedIds = [userId, channelId].sort();
-      const chatRoomId = `chatRoom-channel-${sortedIds[0]}-${sortedIds[1]}`;
+      const chatRoomId = `chatRoom-channel-${channelId}`;
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
       socket.on("sendMessage", async (messageData) => {
         const { message } = messageData;
         if (!message) return;
+        const encrypted = encrypt(message);
         const savedMessage = await this.chatChanelRepo.saveMessage(
           Number(userId),
           Number(channelId),
-          message,
+          String(encrypted),
         );
 
         chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);

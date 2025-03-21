@@ -21,3 +21,6 @@ export const CookieKeys = {
     USER_INFO: "user_info",
 }
 export const DEFAULT_SERVER_ICON = "https://robohash.org/adad";
+export const SECURITY_KEY = process.env.SECURITY_KEY!;
+export const SECURITY_VECTOR = process.env.SECURITY_VECTOR!;
+export const ALGORITHM = process.env.ALGORITHM!;
