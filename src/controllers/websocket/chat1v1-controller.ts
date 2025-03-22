@@ -4,7 +4,7 @@ import Chat1v1Repository from "../../repositories/chat1v1Repository";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import NotificationRepository from "../../repositories/notificationRepository";
 import UserRepository from "../../repositories/UserRepository";
-import { encrypt } from "../../helpers/Encryption";
+import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
 
 export class Chat1v1Controller {
@@ -69,6 +69,11 @@ export class Chat1v1Controller {
             String(encrypted),
           );
 
+          const decryptedMessage = {
+            ...savedMessage,
+            content: decrypt(savedMessage.content),
+          };
+
           await this.notiRepo.sendPushNotification(
             receiverId,
             `${savedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
@@ -81,7 +86,7 @@ export class Chat1v1Controller {
             .to(`user-${receiverId}`)
             .emit("recentChatsList", receiverChats);
 
-          chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
+          chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
         });
       });
 

@@ -2,7 +2,7 @@ import { Server, Socket } from "socket.io";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import ChatChannelRepository from "../../repositories/chatChannelRepository";
 import NotificationRepository from "../../repositories/notificationRepository";
-import { encrypt } from "../../helpers/Encryption";
+import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
 
 export class ChatChannelController {
@@ -49,7 +49,12 @@ export class ChatChannelController {
             String(encrypted),
           );
 
-          chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
+          const decryptedMessage = {
+            ...savedMessage,
+            content: decrypt(savedMessage.content),
+          };
+
+          chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
         });
       });
 
@@ -79,22 +84,32 @@ export class ChatChannelController {
             console.error("Missing userId or messageId");
             return;
           }
-        
+
           try {
-            const messageRead = await this.chatChanelRepo.isMessageRead(Number(userId), Number(messageId));
-        
+            const messageRead = await this.chatChanelRepo.isMessageRead(
+              Number(userId),
+              Number(messageId),
+            );
+
             if (messageRead) {
-              console.log(`User ${userId} has already read message ${messageId}`);
-              return; 
+              console.log(
+                `User ${userId} has already read message ${messageId}`,
+              );
+              return;
             }
-        
-            await this.chatChanelRepo.markMessagesAsRead(Number(userId), Number(messageId));
-            
-            this.io.to(`user-${Number(userId)}`).emit("messagesRead", { userId, messageId });
+
+            await this.chatChanelRepo.markMessagesAsRead(
+              Number(userId),
+              Number(messageId),
+            );
+
+            this.io
+              .to(`user-${Number(userId)}`)
+              .emit("messagesRead", { userId, messageId });
           } catch (error) {
             console.log("Error marking message as read:", error);
           }
-        })
+        });
       });
 
       socket.on("disconnect", async () => {

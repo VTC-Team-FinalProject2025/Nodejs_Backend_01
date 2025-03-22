@@ -14,10 +14,27 @@ export default class ChatChannelRepository {
       include: {
         Sender: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             loginName: true,
             avatarUrl: true,
+          },
+        },
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
           },
         },
       },
