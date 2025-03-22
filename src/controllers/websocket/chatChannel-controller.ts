@@ -62,8 +62,7 @@ export class ChatChannelController {
         if (!messageId) return;
 
         const message = await this.chatChanelRepo.getMessageById(
-          messageId,
-          Number(channelId),
+          messageId
         );
         if (!message) return;
 
@@ -98,14 +97,15 @@ export class ChatChannelController {
               return;
             }
 
-            await this.chatChanelRepo.markMessagesAsRead(
+            const markMessage = await this.chatChanelRepo.markMessagesAsRead(
               Number(userId),
               Number(messageId),
             );
 
-            this.io
-              .to(`user-${Number(userId)}`)
-              .emit("messagesRead", { userId, messageId });
+            // this.io
+            //   .to(`user-${Number(userId)}`)
+            //   .emit("messagesRead", { userId, messageId });
+            chatNamespace.to(chatRoomId).emit("isReadUser", markMessage);
           } catch (error) {
             console.log("Error marking message as read:", error);
           }

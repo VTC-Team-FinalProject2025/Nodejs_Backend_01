@@ -8,9 +8,9 @@ export default class ChatChannelRepository {
     this.prisma = prisma;
   }
 
-  async saveMessage(senderId: number,channelId: number, content: string) {
+  async saveMessage(senderId: number, channelId: number, content: string) {
     return this.prisma.message.create({
-      data: { senderId,channelId, content },
+      data: { senderId, channelId, content },
       include: {
         Sender: {
           select: {
@@ -48,7 +48,7 @@ export default class ChatChannelRepository {
   ) {
     const messages = await this.prisma.message.findMany({
       where: {
-        channelId, 
+        channelId,
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -102,6 +102,18 @@ export default class ChatChannelRepository {
         userId,
         messageId,
       },
+      select: {
+        messageId: true,
+        User: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            loginName: true,
+            avatarUrl: true,
+          },
+        },
+      },
     });
   }
 
@@ -114,7 +126,7 @@ export default class ChatChannelRepository {
         },
       },
     });
-  
+
     return !!record;
   }
 
@@ -239,16 +251,15 @@ export default class ChatChannelRepository {
   }
 
   async deleteMessageById(messageId: number) {
-    return await this.prisma.direct_message.delete({
+    return await this.prisma.message.delete({
       where: { id: messageId },
     });
   }
 
-  async getMessageById(messageId: number, channelId: number) {
+  async getMessageById(messageId: number) {
     return await this.prisma.message.findFirst({
-      where: { 
+      where: {
         id: messageId,
-        channelId: channelId  
       },
     });
   }
