@@ -72,6 +72,34 @@ export class ChatChannelController {
 
         chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id);
       });
+
+      socket.on("markAsRead", async ({ userId, messageId }) => {
+        this.messageQueue.add(async () => {
+          if (!userId || !messageId) {
+            console.error("Missing userId or messageId");
+            return;
+          }
+        
+          try {
+            const messageRead = await this.chatChanelRepo.isMessageRead(Number(userId), Number(messageId));
+        
+            if (messageRead) {
+              console.log(`User ${userId} has already read message ${messageId}`);
+              return; 
+            }
+        
+            await this.chatChanelRepo.markMessagesAsRead(Number(userId), Number(messageId));
+            
+            this.io.to(`user-${Number(userId)}`).emit("messagesRead", { userId, messageId });
+          } catch (error) {
+            console.log("Error marking message as read:", error);
+          }
+        })
+      });
+
+      socket.on("disconnect", async () => {
+        console.log(`❌ User ${userId} disconnected`);
+      });
     });
   }
 }

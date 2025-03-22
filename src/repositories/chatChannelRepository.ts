@@ -31,9 +31,7 @@ export default class ChatChannelRepository {
   ) {
     const messages = await this.prisma.message.findMany({
       where: {
-        OR: [
-          { channelId },
-        ],
+        channelId, 
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -48,6 +46,22 @@ export default class ChatChannelRepository {
             avatarUrl: true,
           },
         },
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
       },
     });
     return messages.map((msg) => ({
@@ -56,15 +70,35 @@ export default class ChatChannelRepository {
     }));
   }
 
-  async markMessagesAsRead(userId: number, receiverId: number) {
-    return this.prisma.direct_message.updateMany({
+  async markMessagesAsRead(userId: number, messageId: number) {
+    return this.prisma.messageReadChannel.upsert({
       where: {
-        senderId: receiverId,
-        receiverId: userId,
-        isRead: false
+        userId_messageId: {
+          userId,
+          messageId,
+        },
       },
-      data: { editedAt: new Date(), isRead: true },
+      update: {
+        readAt: new Date(),
+      },
+      create: {
+        userId,
+        messageId,
+      },
     });
+  }
+
+  async isMessageRead(userId: number, messageId: number): Promise<boolean> {
+    const record = await this.prisma.messageReadChannel.findUnique({
+      where: {
+        userId_messageId: {
+          userId,
+          messageId,
+        },
+      },
+    });
+  
+    return !!record;
   }
 
   async ListRecentChats(
