@@ -8,16 +8,33 @@ export default class ChatChannelRepository {
     this.prisma = prisma;
   }
 
-  async saveMessage(senderId: number,channelId: number, content: string) {
+  async saveMessage(senderId: number, channelId: number, content: string) {
     return this.prisma.message.create({
-      data: { senderId,channelId, content },
+      data: { senderId, channelId, content },
       include: {
         Sender: {
           select: {
+            id: true,
             firstName: true,
             lastName: true,
             loginName: true,
             avatarUrl: true,
+          },
+        },
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
           },
         },
       },
@@ -31,9 +48,7 @@ export default class ChatChannelRepository {
   ) {
     const messages = await this.prisma.message.findMany({
       where: {
-        OR: [
-          { channelId },
-        ],
+        channelId,
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -48,6 +63,22 @@ export default class ChatChannelRepository {
             avatarUrl: true,
           },
         },
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
       },
     });
     return messages.map((msg) => ({
@@ -56,15 +87,47 @@ export default class ChatChannelRepository {
     }));
   }
 
-  async markMessagesAsRead(userId: number, receiverId: number) {
-    return this.prisma.direct_message.updateMany({
+  async markMessagesAsRead(userId: number, messageId: number) {
+    return this.prisma.messageReadChannel.upsert({
       where: {
-        senderId: receiverId,
-        receiverId: userId,
-        isRead: false
+        userId_messageId: {
+          userId,
+          messageId,
+        },
       },
-      data: { editedAt: new Date(), isRead: true },
+      update: {
+        readAt: new Date(),
+      },
+      create: {
+        userId,
+        messageId,
+      },
+      select: {
+        messageId: true,
+        User: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            loginName: true,
+            avatarUrl: true,
+          },
+        },
+      },
     });
+  }
+
+  async isMessageRead(userId: number, messageId: number): Promise<boolean> {
+    const record = await this.prisma.messageReadChannel.findUnique({
+      where: {
+        userId_messageId: {
+          userId,
+          messageId,
+        },
+      },
+    });
+
+    return !!record;
   }
 
   async ListRecentChats(
@@ -188,16 +251,15 @@ export default class ChatChannelRepository {
   }
 
   async deleteMessageById(messageId: number) {
-    return await this.prisma.direct_message.delete({
+    return await this.prisma.message.delete({
       where: { id: messageId },
     });
   }
 
-  async getMessageById(messageId: number, channelId: number) {
+  async getMessageById(messageId: number) {
     return await this.prisma.message.findFirst({
-      where: { 
+      where: {
         id: messageId,
-        channelId: channelId  
       },
     });
   }
