@@ -18,6 +18,8 @@ import UserController from "./controllers/user-controller";
 import Chat1v1Repository from "./repositories/chat1v1Repository";
 import Chat1v1Controller from "./controllers/message1v1-controller";
 import { Server } from "http";
+import RoleRepository from "./repositories/roleRepository";
+import RoleController from "./controllers/role-controller";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -28,6 +30,7 @@ const serverRepo = new ServerRepository(prismaClient);
 const channelRepo = new ChannelRepository(prismaClient, db);
 const notiRepo = new NotificationRepository(prismaClient);
 const chat1v1Repo = new Chat1v1Repository(prismaClient);
+const roleRepo = new RoleRepository(prismaClient);
 const app = new App(
   [
     new AuthController(userRepo, Passport),
@@ -39,11 +42,12 @@ const app = new App(
       notiRepo,
       userRepo,
     ),
-    new ServerController(serverRepo, channelRepo, prismaClient),
+    new ServerController(serverRepo, channelRepo, roleRepo, prismaClient),
     new NotificationController(notiRepo, prismaClient),
     new ChannelController(channelRepo, serverRepo, userRepo),
     new UserController(userRepo),
     new Chat1v1Controller(chat1v1Repo),
+    new RoleController(roleRepo),
   ],
   port,
   notiRepo,

@@ -9,6 +9,7 @@ import ValidateSchema from "../middlewares/validateSchema.middleware";
 import UserRepository from "../repositories/UserRepository";
 import JWT from "../helpers/JWT";
 import CookieHelper from "../helpers/Cookie";
+import { CookieKeys } from "../constants";
 
 export default class ChannelController extends BaseController {
   private channelRepo: ChannelRepository;
@@ -75,7 +76,7 @@ export default class ChannelController extends BaseController {
           }
         }
       }, "SERVER_ACCESS");
-      CookieHelper.setCookie("serverToken", token, res);
+      CookieHelper.setCookie(CookieKeys.CHANNEL_TOKEN, token, res);
 
       res.status(200).json(channel);
     } catch (error) {

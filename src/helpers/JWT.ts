@@ -5,7 +5,7 @@ interface TokenPayload {
     [key: string]: any;
 }
 
-interface ServerAccessTokenPayload {
+export type ServerAccessTokenPayload = {
     iss: string,
     aud: "jitsi",
     sub: "jitsi-vtc.duckdns.org",
@@ -17,6 +17,11 @@ interface ServerAccessTokenPayload {
             avatar: string,
         }
     }
+} | {
+    userId: number,
+    roleId: number,
+    serverId: number,
+    permissions: string[],
 }
 
 export interface AuthTokenPayload {

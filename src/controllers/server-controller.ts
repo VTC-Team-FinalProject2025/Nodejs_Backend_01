@@ -7,28 +7,31 @@ import ChannelRepository from "../repositories/channelRepository";
 import HttpException from "../exceptions/http-exception";
 import { FileRepository } from "../repositories/fileRepository";
 import multer from "multer";
-import { DEFAULT_SERVER_ICON } from "../constants";
+import { CookieKeys, DEFAULT_SERVER_ICON } from "../constants";
 import validateSchema from "../middlewares/validateSchema.middleware";
 import { InviteLinkSchema } from "../schemas/server";
 import CookieHelper from "../helpers/Cookie";
-import JWT from "../helpers/JWT";
+import JWT, { ServerAccessTokenPayload } from "../helpers/JWT";
 import UserRepository from "../repositories/UserRepository";
 import { channel } from "diagnostics_channel";
+import RoleRepository from "../repositories/roleRepository";
 
 export default class FileController extends BaseController {
   private serverRepo: ServerRepository;
   private channelRepo: ChannelRepository;
   private fileRepository: FileRepository;
   private userRepo: UserRepository;
+  private roleRepository: RoleRepository;
   private upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
   });
 
-  constructor(serverRepo: ServerRepository, channelRepo: ChannelRepository, prisma: PrismaClient) {
+  constructor(serverRepo: ServerRepository, channelRepo: ChannelRepository, roleRepository: RoleRepository, prisma: PrismaClient) {
     super();
     this.serverRepo = serverRepo;
     this.channelRepo = channelRepo;
+    this.roleRepository = roleRepository;
     this.fileRepository = new FileRepository();
     this.userRepo = new UserRepository(prisma);
     this.path = "/servers";
@@ -92,6 +95,18 @@ export default class FileController extends BaseController {
       if (!server.Members.find(async (member) => member.User.id === userId)) {
         return next(new HttpException(403, "You are not a member of this server"));
       };
+      const roleId = server.Members.find((member) => member.User.id === userId)?.roleId;
+      if (!roleId) return next(new HttpException(403, "You are not a member of this server"));
+      const permissions = await this.roleRepository.getPermissionsOfRole(roleId);
+      if (server.ownerId === userId) permissions.push("owner");
+      const payload: ServerAccessTokenPayload = {
+        serverId: Number(id),
+        userId: userId,
+        roleId: roleId,
+        permissions: permissions,
+      }
+      const serverToken = JWT.generateToken(payload, "SERVER_ACCESS");
+      CookieHelper.setCookie(CookieKeys.SERVER_TOKEN, serverToken, res);
       let Channels = await this.channelRepo.getChannelsByServerId(Number(id));
       Channels = Channels.map((channel) => {
         if (channel.password) {
