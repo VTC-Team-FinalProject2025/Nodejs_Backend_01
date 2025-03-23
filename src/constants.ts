@@ -38,3 +38,6 @@ export const PERMISSION_NAMES = {
     SHARE_SCREEN: "share_screen",
     TURN_ON_CAMERA: "turn_on_camera",
 }
+export const SECURITY_KEY = process.env.SECURITY_KEY!;
+export const SECURITY_VECTOR = process.env.SECURITY_VECTOR!;
+export const ALGORITHM = process.env.ALGORITHM!;

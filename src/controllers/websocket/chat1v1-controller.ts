@@ -4,6 +4,18 @@ import Chat1v1Repository from "../../repositories/chat1v1Repository";
 import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware";
 import NotificationRepository from "../../repositories/notificationRepository";
 import UserRepository from "../../repositories/UserRepository";
+import { decrypt, encrypt } from "../../helpers/Encryption";
+import PQueue from "p-queue";
+
+interface SendMessage {
+  senderId: number;
+  receiverId: number;
+  message: string;
+  replyMessage?: {
+    replyMessageId: number | null;
+    contentReply: string;
+  };
+}
 
 export class Chat1v1Controller {
   private readonly io: Server;
@@ -11,19 +23,21 @@ export class Chat1v1Controller {
   private readonly chat1v1Repo: Chat1v1Repository;
   private readonly notiRepo: NotificationRepository;
   private readonly userRepo: UserRepository;
+  private readonly messageQueue: PQueue;
 
   constructor(
     io: Server,
     db: Database,
     chat1v1Repo: Chat1v1Repository,
     notiRepo: NotificationRepository,
-    userRepo: UserRepository
+    userRepo: UserRepository,
   ) {
     this.io = io;
     this.db = db;
     this.chat1v1Repo = chat1v1Repo;
     this.notiRepo = notiRepo;
     this.userRepo = userRepo;
+    this.messageQueue = new PQueue({ concurrency: 1 });
     this.setupSocketEvents();
   }
 
@@ -47,38 +61,88 @@ export class Chat1v1Controller {
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
 
-      const InformationChatWithUserId = await this.userRepo.getUserInformationById(Number(chatWithUserId));
+      const InformationChatWithUserId =
+        await this.userRepo.getUserInformationById(Number(chatWithUserId));
 
-      chatNamespace.to(chatRoomId).emit("InformationChatWithUserId", InformationChatWithUserId);
+      chatNamespace
+        .to(chatRoomId)
+        .emit("InformationChatWithUserId", InformationChatWithUserId);
 
-      socket.on("sendMessage", async (messageData) => {
-        const { senderId, receiverId, message } = messageData;
-        if (!senderId || !receiverId || !message) return;
+      socket.on("sendMessage", async (messageData: SendMessage) => {
+        this.messageQueue.add(async () => {
+          const { senderId, receiverId, message, replyMessage } = messageData;
+          if (!senderId || !receiverId || !message) return;
+          const encrypted = encrypt(message);
 
-        const savedMessage = await this.chat1v1Repo.saveMessage(
-          senderId,
-          receiverId,
-          message,
-        );
+          const savedMessage = await this.chat1v1Repo.saveMessage(
+            senderId,
+            receiverId,
+            String(encrypted),
+          );
 
-        // Gửi thông báo đẩy cho người nhận
-        await this.notiRepo.sendPushNotification(
-          receiverId,
-          `${savedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
-        );
+          if (replyMessage && replyMessage.replyMessageId !== null) {
+            await this.chat1v1Repo.SaveReplyMessage(
+              savedMessage.id,
+              replyMessage.replyMessageId,
+            );
+          }
+          const fullSavedMessage = await this.chat1v1Repo.getMessageById(
+            savedMessage.id,
+          );
+          if (!fullSavedMessage) {
+            console.log(`Không tìm thấy tin nhắn với ID: ${savedMessage.id}`);
+            return;
+          }
+          const decryptedMessage = {
+            ...fullSavedMessage,
+            content: decrypt(fullSavedMessage.content),
+            RepliesReceived:
+              fullSavedMessage.RepliesReceived.length > 0
+                ? {
+                    replyMessageId:
+                      fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                      null,
+                    ReplyMessage: {
+                      id:
+                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
+                        null,
+                      content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                        ?.content
+                        ? decrypt(
+                            fullSavedMessage.RepliesReceived[0].ReplyMessage
+                              .content,
+                          )
+                        : null,
+                      senderId:
+                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                          ?.senderId ?? null,
+                    },
+                  }
+                : null,
+          };
 
-        // Cập nhật danh sách chat gần đây của người nhận
-        const receiverChats = await this.chat1v1Repo.ListRecentChats(
-          receiverId,
-        );
-        this.io.to(`user-${receiverId}`).emit("recentChatsList", receiverChats);
+          await this.notiRepo.sendPushNotification(
+            receiverId,
+            `${fullSavedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
+          );
 
-        chatNamespace.to(chatRoomId).emit("newMessage", savedMessage);
+          const receiverChats = await this.chat1v1Repo.ListRecentChats(
+            receiverId,
+          );
+          this.io
+            .to(`user-${receiverId}`)
+            .emit("recentChatsList", receiverChats);
+
+          chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
+        });
       });
 
       // Xác nhận đã đọc tin nhắn
       socket.on("markAsRead", async () => {
-        await this.chat1v1Repo.markMessagesAsRead(Number(userId), Number(chatWithUserId));
+        await this.chat1v1Repo.markMessagesAsRead(
+          Number(userId),
+          Number(chatWithUserId),
+        );
         this.io.to(`user-${Number(userId)}`).emit("messagesRead", { userId });
       });
 
@@ -106,7 +170,7 @@ export class Chat1v1Controller {
 
         await this.chat1v1Repo.deleteMessageById(messageId);
 
-        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id );
+        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id);
       });
     });
   }

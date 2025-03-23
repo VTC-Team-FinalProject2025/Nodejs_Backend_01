@@ -110,16 +110,27 @@ export default class ServerRepository {
         });
     }
     getServersByUserId = async (userId: number) => {
-        return await this.prisma.server.findMany({
+        const servers = await this.prisma.server.findMany({
             where: {
                 Members: {
                     some: {
                         userId: userId
-                    },
+                    }
+                }
+            },
+            include: {
+                Channels: {
+                    select: { id: true },
+                    take: 1
                 }
             }
         });
-    }
+    
+        return servers.map(({ Channels, ...server }) => ({
+            ...server,
+            channelsFirstly: Channels.length > 0 ? Channels[0].id : null
+        }));
+    };
     deleteServer = async (id: number) => {
         return await this.prisma.server.delete({
             where: {

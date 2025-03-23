@@ -2,13 +2,16 @@ model Direct_message {
   id         Int       @id @default(autoincrement())
   senderId   Int
   receiverId Int
-  content    String   @db.VarChar(10000)
+  content    String    @db.VarChar(10000)
   isRead     Boolean   @default(false)
   createdAt  DateTime  @default(now())
   editedAt   DateTime?
 
   Sender   Users @relation("MessageSender", fields: [senderId], references: [id])
   Receiver Users @relation("MessageReceiver", fields: [receiverId], references: [id])
+
+  RepliesSent     Reply_direct_message[] @relation("ReplySender")
+  RepliesReceived Reply_direct_message[] @relation("ReplyReceiver")
 
   @@map("direct_message")
 }

@@ -1,31 +1,54 @@
 import { PrismaClient } from "@prisma/client";
 import { decrypt } from "../helpers/Encryption";
 
-export default class Chat1v1Repository {
+export default class ChatChannelRepository {
   public prisma: PrismaClient;
 
   constructor(prisma: PrismaClient) {
     this.prisma = prisma;
   }
 
-  async saveMessage(senderId: number, receiverId: number, content: string) {
-    return this.prisma.direct_message.create({
-      data: { senderId, receiverId, content },
+  async saveMessage(senderId: number, channelId: number, content: string) {
+    return this.prisma.message.create({
+      data: { senderId, channelId, content },
+      include: {
+        Sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            loginName: true,
+            avatarUrl: true,
+          },
+        },
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+      },
     });
   }
 
   async getMessages(
-    senderId: number,
-    receiverId: number,
+    channelId: number,
     page: number = 1,
     pageSize: number = 20,
   ) {
-    const messages = await this.prisma.direct_message.findMany({
+    const messages = await this.prisma.message.findMany({
       where: {
-        OR: [
-          { senderId, receiverId },
-          { senderId: receiverId, receiverId: senderId },
-        ],
+        channelId,
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -40,7 +63,48 @@ export default class Chat1v1Repository {
             avatarUrl: true,
           },
         },
-        Receiver: {
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    return messages.map((msg) => ({
+      ...msg,
+      content: decrypt(msg.content),
+    }));
+  }
+
+  async markMessagesAsRead(userId: number, messageId: number) {
+    return this.prisma.messageReadChannel.upsert({
+      where: {
+        userId_messageId: {
+          userId,
+          messageId,
+        },
+      },
+      update: {
+        readAt: new Date(),
+      },
+      create: {
+        userId,
+        messageId,
+      },
+      select: {
+        messageId: true,
+        User: {
           select: {
             id: true,
             firstName: true,
@@ -49,50 +113,21 @@ export default class Chat1v1Repository {
             avatarUrl: true,
           },
         },
-        RepliesReceived: {
-          select: {
-            replyMessageId: true,
-            ReplyMessage: {
-              select: {
-                id: true,
-                content: true,
-                senderId: true,
-              },
-            },
-          },
+      },
+    });
+  }
+
+  async isMessageRead(userId: number, messageId: number): Promise<boolean> {
+    const record = await this.prisma.messageReadChannel.findUnique({
+      where: {
+        userId_messageId: {
+          userId,
+          messageId,
         },
       },
     });
 
-    return messages.map((msg) => ({
-      ...msg,
-      content: decrypt(msg.content),
-      RepliesReceived:
-        msg.RepliesReceived.length > 0
-          ? {
-              replyMessageId: msg.RepliesReceived[0]?.replyMessageId ?? null,
-              ReplyMessage: {
-                id: msg.RepliesReceived[0]?.ReplyMessage?.id ?? null,
-                content: msg.RepliesReceived[0]?.ReplyMessage?.content
-                  ? decrypt(msg.RepliesReceived[0].ReplyMessage.content)
-                  : null,
-                senderId:
-                  msg.RepliesReceived[0]?.ReplyMessage?.senderId ?? null,
-              },
-            }
-          : null,
-    }));
-  }
-
-  async markMessagesAsRead(userId: number, receiverId: number) {
-    return this.prisma.direct_message.updateMany({
-      where: {
-        senderId: receiverId,
-        receiverId: userId,
-        isRead: false,
-      },
-      data: { editedAt: new Date(), isRead: true },
-    });
+    return !!record;
   }
 
   async ListRecentChats(
@@ -193,7 +228,7 @@ export default class Chat1v1Repository {
         const chatPartnerId =
           msg.senderId === userId ? msg.receiverId : msg.senderId;
         if (uniqueUsers.has(chatPartnerId)) {
-          uniqueUsers.get(chatPartnerId).latestMessage = decrypt(msg.content);
+          uniqueUsers.get(chatPartnerId).latestMessage = msg.content;
           uniqueUsers.get(chatPartnerId).latestMessageRead = msg.isRead;
           uniqueUsers.get(chatPartnerId).latestMessageSenderId = msg.senderId;
         }
@@ -216,50 +251,16 @@ export default class Chat1v1Repository {
   }
 
   async deleteMessageById(messageId: number) {
-    return await this.prisma.direct_message.delete({
+    return await this.prisma.message.delete({
       where: { id: messageId },
     });
   }
 
   async getMessageById(messageId: number) {
-    return await this.prisma.direct_message.findUnique({
-      where: { id: messageId },
-      include: {
-        Sender: {
-          select: {
-            firstName: true,
-            lastName: true,
-            loginName: true,
-            avatarUrl: true,
-          },
-        },
-        Receiver: {
-          select: {
-            firstName: true,
-            lastName: true,
-            loginName: true,
-            avatarUrl: true,
-          },
-        },
-        RepliesReceived: {
-          select: {
-            replyMessageId: true,
-            ReplyMessage: {
-              select: {
-                id: true,
-                content: true,
-                senderId: true,
-              },
-            },
-          },
-        },
+    return await this.prisma.message.findFirst({
+      where: {
+        id: messageId,
       },
-    });
-  }
-
-  async SaveReplyMessage(messageId: number, replyMessageId: number) {
-    return await this.prisma.reply_direct_message.create({
-      data: { messageId, replyMessageId },
     });
   }
 }
