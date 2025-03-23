@@ -13,5 +13,7 @@ model Direct_message {
   RepliesSent     Reply_direct_message[] @relation("ReplySender")
   RepliesReceived Reply_direct_message[] @relation("ReplyReceiver")
 
+  HiddenMessages Hidden_direct_message[]
+
   @@map("direct_message")
 }

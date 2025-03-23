@@ -172,6 +172,17 @@ export class Chat1v1Controller {
 
         chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id);
       });
+
+      socket.on("hiddenMessage", async ({ messageId }) => {
+        if (!messageId) return;
+
+        const message = await this.chat1v1Repo.getMessageById(messageId);
+        if (!message) return;
+
+        await this.chat1v1Repo.SaveHiddenMessage(Number(userId),messageId);
+
+        chatNamespace.to(chatRoomId).emit("statusHiddenMessage", message.id);
+      })
     });
   }
 }

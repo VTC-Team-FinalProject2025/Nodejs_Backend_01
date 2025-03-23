@@ -262,4 +262,10 @@ export default class Chat1v1Repository {
       data: { messageId, replyMessageId },
     });
   }
+
+  async SaveHiddenMessage(userId: number, messageId: number) {
+    return await this.prisma.hidden_direct_message.create({
+      data: { userId, messageId },
+    });
+  }
 }
