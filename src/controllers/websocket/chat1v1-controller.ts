@@ -8,6 +8,7 @@ import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
 
 interface SendMessage {
+  id: number;
   senderId: number;
   receiverId: number;
   message: string;
@@ -70,7 +71,7 @@ export class Chat1v1Controller {
 
       socket.on("sendMessage", async (messageData: SendMessage) => {
         this.messageQueue.add(async () => {
-          const { senderId, receiverId, message, replyMessage } = messageData;
+          const { id ,senderId, receiverId, message, replyMessage } = messageData;
           if (!senderId || !receiverId || !message) return;
           const encrypted = encrypt(message);
 
@@ -96,6 +97,7 @@ export class Chat1v1Controller {
           const decryptedMessage = {
             ...fullSavedMessage,
             content: decrypt(fullSavedMessage.content),
+            waitingId: id,
             RepliesReceived:
               fullSavedMessage.RepliesReceived.length > 0
                 ? {
@@ -180,8 +182,6 @@ export class Chat1v1Controller {
         if (!message) return;
 
         await this.chat1v1Repo.SaveHiddenMessage(Number(userId),messageId);
-
-        chatNamespace.to(chatRoomId).emit("statusHiddenMessage", message.id);
       })
     });
   }
