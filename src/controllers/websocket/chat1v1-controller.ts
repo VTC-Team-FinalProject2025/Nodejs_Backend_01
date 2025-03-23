@@ -7,6 +7,16 @@ import UserRepository from "../../repositories/UserRepository";
 import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
 
+interface SendMessage {
+  senderId: number;
+  receiverId: number;
+  message: string;
+  replyMessage?: {
+    replyMessageId: number | null;
+    contentReply: string;
+  };
+}
+
 export class Chat1v1Controller {
   private readonly io: Server;
   private readonly db: Database;
@@ -58,25 +68,62 @@ export class Chat1v1Controller {
         .to(chatRoomId)
         .emit("InformationChatWithUserId", InformationChatWithUserId);
 
-      socket.on("sendMessage", async (messageData) => {
+      socket.on("sendMessage", async (messageData: SendMessage) => {
         this.messageQueue.add(async () => {
-          const { senderId, receiverId, message } = messageData;
+          const { senderId, receiverId, message, replyMessage } = messageData;
           if (!senderId || !receiverId || !message) return;
           const encrypted = encrypt(message);
+
           const savedMessage = await this.chat1v1Repo.saveMessage(
             senderId,
             receiverId,
             String(encrypted),
           );
 
+          if (replyMessage && replyMessage.replyMessageId !== null) {
+            await this.chat1v1Repo.SaveReplyMessage(
+              savedMessage.id,
+              replyMessage.replyMessageId,
+            );
+          }
+          const fullSavedMessage = await this.chat1v1Repo.getMessageById(
+            savedMessage.id,
+          );
+          if (!fullSavedMessage) {
+            console.log(`Không tìm thấy tin nhắn với ID: ${savedMessage.id}`);
+            return;
+          }
           const decryptedMessage = {
-            ...savedMessage,
-            content: decrypt(savedMessage.content),
+            ...fullSavedMessage,
+            content: decrypt(fullSavedMessage.content),
+            RepliesReceived:
+              fullSavedMessage.RepliesReceived.length > 0
+                ? {
+                    replyMessageId:
+                      fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                      null,
+                    ReplyMessage: {
+                      id:
+                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
+                        null,
+                      content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                        ?.content
+                        ? decrypt(
+                            fullSavedMessage.RepliesReceived[0].ReplyMessage
+                              .content,
+                          )
+                        : null,
+                      senderId:
+                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                          ?.senderId ?? null,
+                    },
+                  }
+                : null,
           };
 
           await this.notiRepo.sendPushNotification(
             receiverId,
-            `${savedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
+            `${fullSavedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
           );
 
           const receiverChats = await this.chat1v1Repo.ListRecentChats(

@@ -11,24 +11,6 @@ export default class Chat1v1Repository {
   async saveMessage(senderId: number, receiverId: number, content: string) {
     return this.prisma.direct_message.create({
       data: { senderId, receiverId, content },
-      include: {
-        Sender: {
-          select: {
-            firstName: true,
-            lastName: true,
-            loginName: true,
-            avatarUrl: true,
-          },
-        },
-        Receiver: {
-          select: {
-            firstName: true,
-            lastName: true,
-            loginName: true,
-            avatarUrl: true,
-          },
-        },
-      },
     });
   }
 
@@ -67,11 +49,38 @@ export default class Chat1v1Repository {
             avatarUrl: true,
           },
         },
+        RepliesReceived: {
+          select: {
+            replyMessageId: true,
+            ReplyMessage: {
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+              },
+            },
+          },
+        },
       },
     });
+
     return messages.map((msg) => ({
       ...msg,
       content: decrypt(msg.content),
+      RepliesReceived:
+        msg.RepliesReceived.length > 0
+          ? {
+              replyMessageId: msg.RepliesReceived[0]?.replyMessageId ?? null,
+              ReplyMessage: {
+                id: msg.RepliesReceived[0]?.ReplyMessage?.id ?? null,
+                content: msg.RepliesReceived[0]?.ReplyMessage?.content
+                  ? decrypt(msg.RepliesReceived[0].ReplyMessage.content)
+                  : null,
+                senderId:
+                  msg.RepliesReceived[0]?.ReplyMessage?.senderId ?? null,
+              },
+            }
+          : null,
     }));
   }
 
@@ -215,6 +224,42 @@ export default class Chat1v1Repository {
   async getMessageById(messageId: number) {
     return await this.prisma.direct_message.findUnique({
       where: { id: messageId },
+      include: {
+        Sender: {
+          select: {
+            firstName: true,
+            lastName: true,
+            loginName: true,
+            avatarUrl: true,
+          },
+        },
+        Receiver: {
+          select: {
+            firstName: true,
+            lastName: true,
+            loginName: true,
+            avatarUrl: true,
+          },
+        },
+        RepliesReceived: {
+          select: {
+            replyMessageId: true,
+            ReplyMessage: {
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  async SaveReplyMessage(messageId: number, replyMessageId: number) {
+    return await this.prisma.reply_direct_message.create({
+      data: { messageId, replyMessageId },
     });
   }
 }
