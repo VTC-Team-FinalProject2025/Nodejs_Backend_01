@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import Random from "../helpers/Random";
 
 export default class ServerRepository {
-    private prisma : PrismaClient;
+    private prisma: PrismaClient;
     constructor(prisma: PrismaClient) {
         this.prisma = prisma;
     }
@@ -31,19 +31,19 @@ export default class ServerRepository {
             });
             let roleOwner = px.role.create({
                 data: {
-                        name: "Owner",
-                        color: "red",
-                        serverId: server.id
-                    }
+                    name: "Owner",
+                    color: "red",
+                    serverId: server.id
+                }
             });
             let roleMember = px.role.create({
                 data: {
-                        name: "Member",
-                        color: "green",
-                        serverId: server.id
-                    }
+                    name: "Member",
+                    color: "green",
+                    serverId: server.id
+                }
             });
-            let inviteLink = this.generateInviteToken({serverId: server.id});
+            let inviteLink = this.generateInviteToken({ serverId: server.id });
             let result = await Promise.all([channels, roleOwner, roleMember]);
             let memberShip = await px.server_member.create({
                 data: {
@@ -52,7 +52,7 @@ export default class ServerRepository {
                     roleId: result[1].id
                 }
             });
-            return {server};
+            return { server };
         });
     }
     updateServer = async (id: number, name: string, iconUrl?: string) => {
@@ -89,14 +89,6 @@ export default class ServerRepository {
                             }
                         },
                     },
-                },
-                Channels: {
-                    select: {
-                        id: true,
-                        name: true,
-                        type: true,
-                        createdAt: true,
-                    }
                 },
                 Roles: {
                     select: {
@@ -149,7 +141,7 @@ export default class ServerRepository {
     getServerByInviteToken = async (inviteToken: string) => {
         return await this.prisma.server.findFirst({
             where: {
-                InviteLink:{
+                InviteLink: {
                     token: inviteToken,
                     expireAt: {
                         gte: new Date(),
@@ -178,7 +170,7 @@ export default class ServerRepository {
             }
         });
     }
-    generateInviteToken = async (data: {serverId: number, count?: number, expireIn?: number}) => {
+    generateInviteToken = async (data: { serverId: number, count?: number, expireIn?: number }) => {
         let token;
         let isUnique = false;
 
@@ -194,7 +186,7 @@ export default class ServerRepository {
                 isUnique = true;
             }
         }
-        if(!token) throw new Error("Failed to generate token");
+        if (!token) throw new Error("Failed to generate token");
         // Tạo InviteLink mới count số lương có thể tham gia
         const oneDay = 24 * 60 * 60 * 1000;
         const inviteLink = await this.prisma.inviteLink.create({
@@ -230,7 +222,7 @@ export default class ServerRepository {
             }
         });
     }
-    updateInviteToken = async (data: {serverId: number, count: number}) => {
+    updateInviteToken = async (data: { serverId: number, count: number }) => {
         return await this.prisma.inviteLink.update({
             where: {
                 serverId: data.serverId
@@ -241,16 +233,16 @@ export default class ServerRepository {
         }
         );
     }
-    joinServer = async (data: {userId: number, serverId: number}) => {
+    joinServer = async (data: { userId: number, serverId: number }) => {
         const existingMember = await this.existingMember(data);
-        if(existingMember) throw new Error("User is already a member of this server");
+        if (existingMember) throw new Error("User is already a member of this server");
         const role = await this.prisma.role.findFirst({
             where: {
                 serverId: data.serverId,
                 name: "Member"
             }
         })
-        if(!role) throw new Error("Role not found in server");
+        if (!role) throw new Error("Role not found in server");
         let result = await this.prisma.$transaction(async (px) => {
             let inviteLink = await px.inviteLink.findFirst({
                 where: {
@@ -263,10 +255,10 @@ export default class ServerRepository {
                     }
                 }
             });
-            if(!inviteLink) throw new Error("Invite link not found or expired");
+            if (!inviteLink) throw new Error("Invite link not found or expired");
             let decreaseCount;
-            if(inviteLink.count > 0) {
-                decreaseCount =  px.inviteLink.update({
+            if (inviteLink.count > 0) {
+                decreaseCount = px.inviteLink.update({
                     where: {
                         id: inviteLink.id
                     },
@@ -282,8 +274,8 @@ export default class ServerRepository {
                     roleId: role.id
                 }
             });
-            const result =  await Promise.all([decreaseCount, createrMemberShip]);
-            return {memberShip: result[1]};
+            const result = await Promise.all([decreaseCount, createrMemberShip]);
+            return { memberShip: result[1] };
         });
         return result?.memberShip;
     }
@@ -297,7 +289,7 @@ export default class ServerRepository {
             }
         });
     }
-    existingMember = async (data: {userId: number, serverId: number}) => {
+    existingMember = async (data: { userId: number, serverId: number }) => {
         const existingMember = await this.prisma.server_member.findFirst({
             where: {
                 serverId: data.serverId,

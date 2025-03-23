@@ -1,21 +1,23 @@
 import { PrismaClient } from "@prisma/client";
+import { Database } from "firebase-admin/database";
 
 type ChannelCreate = {
-    serverId: number;
-    name: string;
-    type: "meet" | "chat";
-    password?: string;
+  serverId: number;
+  name: string;
+  type: "meet" | "chat";
+  password?: string;
 }
 type ChannelUpdate = {
-    id: number;
-    name: string;
-    password?: string;
+  id: number;
+  name: string;
+  password?: string;
 }
 export default class ChannelRepository {
   private prisma: PrismaClient;
-
-  constructor(prisma: PrismaClient) {
+  private readonly db: Database;
+  constructor(prisma: PrismaClient, db: Database) {
     this.prisma = prisma;
+    this.db = db;
   }
 
   // Create a new channel
@@ -49,9 +51,16 @@ export default class ChannelRepository {
 
   // Get all channels for a specific server
   getChannelsByServerId = async (serverId: number) => {
-    return this.prisma.channel.findMany({
+    const channels = await this.prisma.channel.findMany({
       where: { serverId },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        password: true
+      }
     });
+    return await this.getAllChannelsWithParticipants(channels);
   };
 
   // Update a channel
@@ -68,4 +77,43 @@ export default class ChannelRepository {
       where: { id }
     });
   };
+
+  private getAllChannelsWithParticipants = async (channels: any[]) => {
+    const channelsTypeMeeting = channels.filter((channel) => channel.type === "meet");
+    const channelsTypeChat = channels.filter((channel) => channel.type === "chat");
+    const promises: Promise<any>[] = [];
+    channelsTypeMeeting.forEach(async (channel) => {
+      const promise = this.getChannelParticipants(String(channel.id));
+      promises.push(promise);
+    });
+
+    const participants = await Promise.all(promises);
+    let channelWithParticipants = channelsTypeMeeting.map((channel, index) => {
+      return {
+        ...channel,
+        participants: participants[index],
+      };
+    })
+
+    return [...channelWithParticipants, ...channelsTypeChat];
+  }
+
+  getChannelParticipants = async (channelId: string) => {
+    const participantsSnapshot = await this.db.ref(`channels/${channelId}/participants`).once("value");
+    return participantsSnapshot.val();
+  }
+
+  handleRemoveUserFromChannel = async ({ userId, callback }: { userId: string, callback: (channelId: string) => void }) => {
+    // Lấy danh sách tất cả các channels mà user đang tham gia
+    const userChannelsSnapshot = await this.db.ref(`users/${userId}/channels`).once("value");
+    const userChannels = userChannelsSnapshot.val();
+
+    if (userChannels) {
+      for (const channelId of Object.keys(userChannels)) {
+        callback(channelId);
+        await this.db.ref(`channels/${channelId}/participants/${userId}`).remove();
+      }
+    }
+    await this.db.ref(`users/${userId}/channels`).remove();
+  }
 } 

@@ -2,7 +2,7 @@ import express from "express";
 import { BaseController } from "./abstractions/base-controller";
 import HttpException from "../exceptions/http-exception";
 import bcrypt, { hashSync } from "bcrypt";
-import JWTHelper from "../helpers/JWT";
+import JWTHelper, { AuthTokenPayload } from "../helpers/JWT";
 import ValidateSchema from "../middlewares/validateSchema.middleware";
 import { SignupFormSchema, LoginFormSchema, ForgetPasswordFormSchema } from "../schemas/auth";
 import SendEmailResetPassword from "../emails/emailForgotPassword.email";
@@ -353,9 +353,9 @@ export default class AuthController extends BaseController {
     if (!refreshToken) {
       return next(new HttpException(400, "Missing refresh token"));
     }
-    const payload = JWTHelper.verifyToken(refreshToken, "REFRESH");
+    const payload = JWTHelper.verifyToken(refreshToken, "REFRESH") as AuthTokenPayload;
 
-    if (!payload?.userId) {
+    if (!payload.userId) {
       return next(new HttpException(400, "Invalid refresh token"));
     }
     let getUserById = await this.userRepo.getUserById(payload.userId);
