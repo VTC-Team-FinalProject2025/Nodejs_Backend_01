@@ -1,0 +1,11 @@
+model Reply_direct_message {
+    id             Int @id @default(autoincrement())
+    messageId      Int
+    replyMessageId Int
+
+    Message      Direct_message @relation("ReplyReceiver", fields: [messageId], references: [id])
+    ReplyMessage Direct_message @relation("ReplySender", fields: [replyMessageId], references: [id])
+
+    @@unique([messageId, replyMessageId])
+    @@map("reply_direct_message")
+}
