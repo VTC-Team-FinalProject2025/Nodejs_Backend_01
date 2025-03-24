@@ -193,6 +193,19 @@ export class Chat1v1Controller {
         chatNamespace.to(chatRoomId).emit("dataIconMessage", IconMessage);
       })
 
+      socket.on("UpdateIconMessage", async ({ id, newIcon }) => {
+        if (!id || !newIcon) return;
+        
+        const getIconMessage = await this.chat1v1Repo.GetIconMessageId(Number(id));
+        if (!getIconMessage) return;
+
+        console.log("newIcon", newIcon)
+
+        const IconMessage = await this.chat1v1Repo.UpdateIconMessage(Number(userId), id, newIcon);
+
+        chatNamespace.to(chatRoomId).emit("dataUpdateIconMessage", IconMessage);
+      })
+
       socket.on("DeleteIconMessage", async ({ id }) => {
         if (!id) return;
 
