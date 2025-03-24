@@ -1,0 +1,11 @@
+model Icon_direct_message {
+  id        Int  @id @default(autoincrement())
+  userId    Int 
+  messageId Int
+  icon      String
+
+  User    Users          @relation(fields: [userId], references: [id])
+  Message Direct_message @relation(fields: [messageId], references: [id])
+
+  @@unique([userId, messageId])
+}

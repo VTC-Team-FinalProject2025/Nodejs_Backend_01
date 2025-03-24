@@ -15,5 +15,7 @@ model Direct_message {
 
   HiddenMessages Hidden_direct_message[]
 
+  IconMessages Icon_direct_message[]
+
   @@map("direct_message")
 }
