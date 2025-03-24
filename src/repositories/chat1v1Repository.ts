@@ -26,6 +26,11 @@ export default class Chat1v1Repository {
           { senderId, receiverId },
           { senderId: receiverId, receiverId: senderId },
         ],
+        NOT: {
+          HiddenMessages: {
+            some: { userId: senderId }, 
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -260,6 +265,12 @@ export default class Chat1v1Repository {
   async SaveReplyMessage(messageId: number, replyMessageId: number) {
     return await this.prisma.reply_direct_message.create({
       data: { messageId, replyMessageId },
+    });
+  }
+
+  async SaveHiddenMessage(userId: number, messageId: number) {
+    return await this.prisma.hidden_direct_message.create({
+      data: { userId, messageId },
     });
   }
 }

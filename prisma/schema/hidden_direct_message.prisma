@@ -1,0 +1,10 @@
+model Hidden_direct_message {
+  id        Int  @id @default(autoincrement())
+  userId    Int 
+  messageId Int 
+
+  User    Users          @relation(fields: [userId], references: [id])
+  Message Direct_message @relation(fields: [messageId], references: [id])
+
+  @@unique([userId, messageId])
+}

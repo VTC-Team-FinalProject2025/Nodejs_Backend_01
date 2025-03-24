@@ -29,7 +29,9 @@ model Users {
 
   tokens TokenNotification[]
 
-  Readers MessageReadChannel[] 
+  Readers MessageReadChannel[]
+
+  HiddenMessages Hidden_direct_message[]
 
   @@map("users")
 }
