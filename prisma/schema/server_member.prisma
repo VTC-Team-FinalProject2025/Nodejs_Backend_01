@@ -7,7 +7,7 @@ model Server_member {
 
   Server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
   User   Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
-  Role   Role?  @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  Role   Role?  @relation(fields: [roleId], references: [id], onDelete: SetNull)
 
   @@unique([serverId, userId])
   @@map("Server_member")

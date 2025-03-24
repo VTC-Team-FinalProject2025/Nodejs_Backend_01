@@ -12,7 +12,7 @@ import ValidatorHelper from "../helpers/Validator";
 import { BYCRYPT_SALT } from "../constants";
 import EmailAuthenticatedUser from "../emails/emailAuthenticatedUser";
 import UserRepository from "../repositories/UserRepository";
-import { v4 as uuidv4} from "uuid";
+import { v4 as uuidv4 } from "uuid";
 
 type GoogleProfile = {
   id: string,
@@ -20,8 +20,8 @@ type GoogleProfile = {
     familyName: string,
     givenName: string,
   },
-  emails: {value: string, verified: boolean}[],
-  photos: {value: string}[],
+  emails: { value: string, verified: boolean }[],
+  photos: { value: string }[],
 }
 
 type GitHubProfile = {
@@ -29,14 +29,14 @@ type GitHubProfile = {
   displayName: string,
   username: string,
   profileUrl: string,
-  photos: {value: string}[],
+  photos: { value: string }[],
   email: string,
 }
 
 export default class AuthController extends BaseController {
-  public userRepo : UserRepository;
+  public userRepo: UserRepository;
   public passport;
-  constructor(userRepo: UserRepository, passport : any) {
+  constructor(userRepo: UserRepository, passport: any) {
     super();
     this.path = "/auth";
     this.userRepo = userRepo;
@@ -259,7 +259,7 @@ export default class AuthController extends BaseController {
   ) => {
     const user = (request.user as any).profile as GoogleProfile;
     const userExisted = await this.userRepo.getUserByEmail(user.emails[0].value);
-    if(userExisted){
+    if (userExisted) {
       const token = JWTHelper.generateToken({ userId: userExisted.id }, "ACCESS");
       const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
       this.setTokenIntoCookie(token, refresh_token, response, userExisted);
@@ -272,13 +272,12 @@ export default class AuthController extends BaseController {
         password: hashSync(uuidv4(), BYCRYPT_SALT),
         isEmailVertify: true,
         status: true,
-        phone: "",
       });
       const token = JWTHelper.generateToken({ userId: userCreate.id }, "ACCESS");
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
       this.setTokenIntoCookie(token, refresh_token, response, userCreate);
     }
-    return response.redirect(URL_CLIENT+'/main/me');
+    return response.redirect(URL_CLIENT + '/main/me');
   };
 
   handleGitHubCallback = async (
@@ -288,14 +287,14 @@ export default class AuthController extends BaseController {
   ) => {
     const user = (request.user as any).profile as GitHubProfile;
     const userExisted = await this.userRepo.getUserByGithubId(user.id);
-    if(userExisted){
+    if (userExisted) {
       const token
         = JWTHelper.generateToken({ userId: userExisted.id }, "ACCESS");
       const refresh_token = JWTHelper.generateToken({ userId: userExisted.id }, "REFRESH");
       this.setTokenIntoCookie(token, refresh_token, response, userExisted);
 
     } else {
-      if((await this.userRepo.getUserByEmail(user.email.split("@")[0] + "+vtcapp" + user.email.split("@")[1]))){
+      if ((await this.userRepo.getUserByEmail(user.email.split("@")[0] + "+vtcapp" + user.email.split("@")[1]))) {
         return next(new HttpException(400, "Email already existed"));
       }
       let userCreate = await this.userRepo.createUser({
@@ -312,7 +311,7 @@ export default class AuthController extends BaseController {
       const refresh_token = JWTHelper.generateToken({ userId: userCreate.id }, "REFRESH");
       this.setTokenIntoCookie(token, refresh_token, response, userCreate);
     }
-    return response.redirect(URL_CLIENT+"/main/me");
+    return response.redirect(URL_CLIENT + "/main/me");
   };
 
   resendEmailVertify = async (
@@ -322,16 +321,16 @@ export default class AuthController extends BaseController {
   ) => {
     const { email } = request.body;
     if (!email) {
-      return next(new HttpException(400, {message: "Email not filled in", code: "EMAIL_NOT_FILLED"}));
+      return next(new HttpException(400, { message: "Email not filled in", code: "EMAIL_NOT_FILLED" }));
     } else if (!ValidatorHelper.isEmail(email)) {
-      return next(new HttpException(400, {message: "Not an email address", code: "NOT_AN_EMAIL"}));
+      return next(new HttpException(400, { message: "Not an email address", code: "NOT_AN_EMAIL" }));
     }
     let user = await this.userRepo.getUserByEmail(email);
     if (!user) {
-      return next(new HttpException(404, {message: "This email does not exist", code: "EMAIL_NOT_EXIST"}));
+      return next(new HttpException(404, { message: "This email does not exist", code: "EMAIL_NOT_EXIST" }));
     }
-    if(user.isEmailVertify){
-      return next(new HttpException(400, {message: "Email is already verify", code: "EMAIL_ALREADY_VERIFY"}));
+    if (user.isEmailVertify) {
+      return next(new HttpException(400, { message: "Email is already verify", code: "EMAIL_ALREADY_VERIFY" }));
     }
     const vertifyToken = await JWTHelper.generateToken(
       { userId: user.id },
@@ -374,12 +373,12 @@ export default class AuthController extends BaseController {
   }
   setTokenIntoCookie = (token: string, refresh_token: string, response: express.Response, user: any) => {
     CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response, {httpOnly: true, maxAge: 7 * 24* 60 * 60 * 1000});
+    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
     CookieHelper.setCookie(
       CookieKeys.USER_INFO,
       JSON.stringify({ userId: user.id, avatarUrl: user.avatarUrl, loginName: user.loginName, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone }),
       response,
-      {httpOnly: false, maxAge: 7 * 24* 60 * 60 * 1000}
+      { httpOnly: false, maxAge: 7 * 24 * 60 * 60 * 1000 }
     );
   }
 }

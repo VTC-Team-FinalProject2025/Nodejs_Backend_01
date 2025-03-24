@@ -25,6 +25,7 @@ export default class RoleController extends BaseController {
         this.router.delete(`/:roleId/permissions/:permissionId`, this.removePermissionFromRole);
         this.router.get(`/:roleId/permissions`, this.getPermissionsOfRole);
         this.router.get(`/permissions/all`, this.getAllPermissions);
+        this.router.post(`/assign`, this.assignRoleToMember);
     }
 
     // Tạo vai trò mới
@@ -34,6 +35,7 @@ export default class RoleController extends BaseController {
             const role = await this.roleRepo.createRole({ serverId, name, color, permissions });
             res.status(201).json(role);
         } catch (error) {
+            console.log(error);
             next(new HttpException(500, "Failed to create role"));
         }
     };
@@ -72,12 +74,23 @@ export default class RoleController extends BaseController {
             if (!role) {
                 return next(new HttpException(404, "Role not found"));
             }
-            const updatedRole = await this.roleRepo.updateRole(Number(id), { name, color });
+
+            let updateData: { name?: string; color?: string } = {};
+
+            if (role.name === "Owner" || role.name === "Member") {
+                // Chỉ cho phép cập nhật color nếu là role mặc định
+                updateData.color = color;
+            } else {
+                updateData = { name, color };
+            }
+
+            const updatedRole = await this.roleRepo.updateRole(Number(id), updateData);
             res.status(200).json(updatedRole);
         } catch (error) {
             next(new HttpException(500, "Failed to update role"));
         }
     };
+
 
     // Xoá vai trò
     private deleteRole = async (req: Request, res: Response, next: NextFunction) => {
@@ -87,7 +100,7 @@ export default class RoleController extends BaseController {
             if (!role) {
                 return next(new HttpException(404, "Role not found"));
             }
-            await this.roleRepo.deleteRole(Number(id));
+            await this.roleRepo.deleteRole(role);
             res.status(200).json({ message: "Role deleted successfully" });
         } catch (error) {
             next(new HttpException(500, "Failed to delete role"));
@@ -133,6 +146,17 @@ export default class RoleController extends BaseController {
             res.status(200).json(permissions);
         } catch (error) {
             next(new HttpException(500, "Failed to get all permissions"));
+        }
+    }
+
+    // asign role to member
+    private assignRoleToMember = async (req: Request, res: Response, next: NextFunction) => {
+        const { roleId, memberId } = req.body;
+        try {
+            await this.roleRepo.assignRoleToMember(Number(roleId), Number(memberId));
+            res.status(200).json({ message: "Role assigned to member successfully" });
+        } catch (error) {
+            next(new HttpException(500, "Failed to assign role to member"));
         }
     }
 }

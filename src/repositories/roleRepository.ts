@@ -1,4 +1,4 @@
-import { PrismaClient, Role } from "@prisma/client";
+import { Permission, PrismaClient, Role } from "@prisma/client";
 
 type CreateRoleInput = {
     serverId: number;
@@ -26,7 +26,9 @@ export default class RoleRepository {
                 color,
                 RolePermissions: {
                     create: permissions.map((permissionId) => ({
-                        permissionId,  // Kết nối Role với Permission qua bảng Role_permission
+                        Permission: {
+                            connect: { id: permissionId },
+                        },
                     })),
                 },
             },
@@ -91,9 +93,23 @@ export default class RoleRepository {
     }
 
     // Xoá vai trò
-    async deleteRole(roleId: number): Promise<Role> {
+    async deleteRole(role: number | Role): Promise<Role> {
+        if (typeof role === 'number') {
+            role = (await this.getRoleById(role)) as Role;
+        }
+        const memberDefaultRole = await this.prisma.role.findFirst({
+            where: { serverId: role.serverId, name: 'Member' },
+        });
+        if (!memberDefaultRole) throw new Error('Default role not found');
+
+        // no need to await this
+        const updateMember = this.prisma.server_member.updateMany({
+            where: { roleId: role.id },
+            data: { roleId: memberDefaultRole.id },
+        });
+
         const deletedRole = await this.prisma.role.delete({
-            where: { id: roleId },
+            where: { id: role.id },
         });
         return deletedRole;
     }
@@ -131,13 +147,13 @@ export default class RoleRepository {
     }
 
     // get permissions of a role
-    async getPermissionsOfRole(roleId: number): Promise<string[]> {
+    async getPermissionsOfRole(roleId: number): Promise<Permission[]> {
         const permissions = await this.prisma.role_permission.findMany({
             where: { roleId },
-            select: { Permission: { select: { name: true } } },
+            select: { Permission: { select: { name: true, id: true, description: true } } },
         });
 
-        return permissions.map((p) => p.Permission.name);
+        return permissions.map((p) => p.Permission);
     }
 
     // get all permissions
@@ -146,6 +162,34 @@ export default class RoleRepository {
             select: { name: true, id: true, description: true },
         });
         return permissions;
+    }
+
+    // assignRoleToMember
+    async assignRoleToMember(roleId: number, memberId: number): Promise<void> {
+        const existingRole = await this.prisma.role.findUnique({
+            where: { id: roleId },
+        });
+
+        if (!existingRole) {
+            throw new Error('Role not found');
+        }
+
+        const existingMember = await this.prisma.server_member.findUnique({
+            where: { serverId_userId: { serverId: existingRole.serverId, userId: memberId } },
+        });
+
+        if (!existingMember) {
+            throw new Error('Member not found');
+        }
+
+        await this.prisma.server_member.update({
+            where: { serverId_userId: { userId: memberId, serverId: existingMember.serverId } },
+            data: {
+                Role: {
+                    connect: { id: roleId },
+                }
+            },
+        });
     }
 
 }

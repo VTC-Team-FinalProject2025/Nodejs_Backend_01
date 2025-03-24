@@ -49,6 +49,7 @@ export default class FileController extends BaseController {
     this.router.post(`/leave/:id`, this.leaveServer);
     this.router.post(`/invite-token`, validateSchema(InviteLinkSchema), this.createInviteLink);
     this.router.get(`/invite-token/:token`, this.getServerByInviteToken);
+    this.router.post(`/kick`, this.kickMemberFromServer);
   }
 
   private createServer = async (req: Request, res: Response, next: NextFunction) => {
@@ -97,13 +98,14 @@ export default class FileController extends BaseController {
       };
       const roleId = server.Members.find((member) => member.User.id === userId)?.roleId;
       if (!roleId) return next(new HttpException(403, "You are not a member of this server"));
-      const permissions = await this.roleRepository.getPermissionsOfRole(roleId);
-      if (server.ownerId === userId) permissions.push("owner");
+      let permissions = await this.roleRepository.getPermissionsOfRole(roleId);
+      let permissionStrings = permissions.map((p) => p.name);
+      if (server.ownerId === userId) permissionStrings.push("owner");
       const payload: ServerAccessTokenPayload = {
         serverId: Number(id),
         userId: userId,
         roleId: roleId,
-        permissions: permissions,
+        permissions: permissionStrings,
       }
       const serverToken = JWT.generateToken(payload, "SERVER_ACCESS");
       CookieHelper.setCookie(CookieKeys.SERVER_TOKEN, serverToken, res);
@@ -257,4 +259,25 @@ export default class FileController extends BaseController {
       next(new HttpException(500, "Failed to retrieve server"));
     }
   }
-} 
+
+  private kickMemberFromServer = async (req: Request, res: Response, next: NextFunction) => {
+    const { userId, serverId } = req.body;
+    const { userId: userRequestId } = req.user;
+    try {
+      const server = await this.serverRepo.getServerById(serverId);
+      if (!server) {
+        return next(new HttpException(404, "Server not found"));
+      }
+      if (server.ownerId === userId) {
+        return next(new HttpException(400, "You can not kick the owner of this server"));
+      }
+      if (userId === userRequestId) {
+        return next(new HttpException(400, "You can not kick yourself"));
+      }
+      await this.serverRepo.leaveServer(userId, serverId);
+      res.status(200).json({ message: "Kicked member successfully" });
+    } catch (error) {
+      next(new HttpException(500, "Failed to kick member"));
+    }
+  }
+}
