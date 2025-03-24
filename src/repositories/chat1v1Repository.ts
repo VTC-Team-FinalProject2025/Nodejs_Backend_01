@@ -26,6 +26,11 @@ export default class Chat1v1Repository {
           { senderId, receiverId },
           { senderId: receiverId, receiverId: senderId },
         ],
+        NOT: {
+          HiddenMessages: {
+            some: { userId: senderId }, 
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,

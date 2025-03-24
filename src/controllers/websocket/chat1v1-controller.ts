@@ -182,6 +182,7 @@ export class Chat1v1Controller {
         if (!message) return;
 
         await this.chat1v1Repo.SaveHiddenMessage(Number(userId),messageId);
+        chatNamespace.to(chatRoomId).emit("statusHiddenMessage", message.id);
       })
     });
   }
