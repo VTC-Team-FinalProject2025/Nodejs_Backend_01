@@ -28,7 +28,7 @@ export default class Chat1v1Repository {
         ],
         NOT: {
           HiddenMessages: {
-            some: { userId: senderId }, 
+            some: { userId: senderId },
           },
         },
       },
@@ -64,6 +64,14 @@ export default class Chat1v1Repository {
                 senderId: true,
               },
             },
+          },
+        },
+        IconMessages: {
+          select: {
+            id: true,
+            userId: true,
+            messageId: true,
+            icon: true,
           },
         },
       },
@@ -271,6 +279,23 @@ export default class Chat1v1Repository {
   async SaveHiddenMessage(userId: number, messageId: number) {
     return await this.prisma.hidden_direct_message.create({
       data: { userId, messageId },
+    });
+  }
+
+  async SaveIconMessage(userId: number, messageId: number, icon: string) {
+    return await this.prisma.icon_direct_message.create({
+      data: { userId, messageId, icon },
+    });
+  }
+  async GetIconMessageId(id: number) {
+    return await this.prisma.icon_direct_message.findUnique({
+      where: { id },
+    });
+  }
+
+  async DeleteIconMessageById(id: number) {
+    return await this.prisma.direct_message.delete({
+      where: { id },
     });
   }
 }
