@@ -184,6 +184,25 @@ export class Chat1v1Controller {
         await this.chat1v1Repo.SaveHiddenMessage(Number(userId),messageId);
         chatNamespace.to(chatRoomId).emit("statusHiddenMessage", message.id);
       })
+
+      socket.on("IconMessage", async ({ messageId, icon }) => {
+        if (!messageId || !icon) return;
+
+        const IconMessage = await this.chat1v1Repo.SaveIconMessage(Number(userId), messageId, icon);
+
+        chatNamespace.to(chatRoomId).emit("dataIconMessage", IconMessage);
+      })
+
+      socket.on("DeleteIconMessage", async ({ id }) => {
+        if (!id) return;
+
+        const getIconMessage = await this.chat1v1Repo.GetIconMessageId(Number(id));
+        if (!getIconMessage) return;
+
+        const deleteIconMessage = await this.chat1v1Repo.DeleteIconMessageById(getIconMessage.id)
+
+        chatNamespace.to(chatRoomId).emit("dataDeleteIconMessage", deleteIconMessage);
+      })
     });
   }
 }
