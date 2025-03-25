@@ -199,8 +199,6 @@ export class Chat1v1Controller {
         const getIconMessage = await this.chat1v1Repo.GetIconMessageId(Number(id));
         if (!getIconMessage) return;
 
-        console.log("newIcon", newIcon)
-
         const IconMessage = await this.chat1v1Repo.UpdateIconMessage(Number(userId), id, newIcon);
 
         chatNamespace.to(chatRoomId).emit("dataUpdateIconMessage", IconMessage);
@@ -212,9 +210,9 @@ export class Chat1v1Controller {
         const getIconMessage = await this.chat1v1Repo.GetIconMessageId(Number(id));
         if (!getIconMessage) return;
 
-        const deleteIconMessage = await this.chat1v1Repo.DeleteIconMessageById(getIconMessage.id)
+        this.chat1v1Repo.DeleteIconMessageById(getIconMessage.id)
 
-        chatNamespace.to(chatRoomId).emit("dataDeleteIconMessage", deleteIconMessage);
+        chatNamespace.to(chatRoomId).emit("dataDeleteIconMessage", id);
       })
     });
   }
