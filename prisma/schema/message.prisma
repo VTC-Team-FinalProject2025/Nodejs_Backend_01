@@ -8,7 +8,11 @@ model Message {
   Channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
   Sender  Users   @relation("UserMessages", fields: [senderId], references: [id])
 
-  Readers MessageReadChannel[] 
+  Readers MessageReadChannel[]
+
+  HiddenMessagesChannel Hidden_message_channel[]
+
+  IconMessagesChannel Icon_message_channel[]
 
   @@map("message")
 }

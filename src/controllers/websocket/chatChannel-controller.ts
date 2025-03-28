@@ -4,12 +4,32 @@ import ChatChannelRepository from "../../repositories/chatChannelRepository";
 import NotificationRepository from "../../repositories/notificationRepository";
 import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
+import { TypeStatus } from "@prisma/client";
+
+interface ListUserChannel {
+  id: number;
+  loginName: string; 
+  avatarUrl: string | null;
+}
+
+interface InformationChannel {
+  name: string;
+  id: number;
+  createdAt: Date;
+  serverId: number;
+  type: TypeStatus;
+  password: string | null;
+}
 
 export class ChatChannelController {
   private readonly io: Server;
   private readonly chatChanelRepo: ChatChannelRepository;
   private readonly notiRepo: NotificationRepository;
   private readonly messageQueue: PQueue;
+  private ListUserChannel: ListUserChannel[] = [];
+  private InformationChannel!: InformationChannel;
+  private InformationUser!: ListUserChannel | null;
+
 
   constructor(
     io: Server,
@@ -38,6 +58,30 @@ export class ChatChannelController {
       const chatRoomId = `chatRoom-channel-${channelId}`;
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
+
+      const InformationChannel = await this.chatChanelRepo.getDetailChannelById(Number(channelId));
+      if (InformationChannel) {
+        this.InformationChannel = InformationChannel;
+      }
+      if(InformationChannel) {
+        const ListUserServerData = await this.chatChanelRepo.getListUserServerById(InformationChannel.serverId);
+        if (ListUserServerData && ListUserServerData.Members?.[0]?.User) {
+          this.ListUserChannel = ListUserServerData.Members
+            ?.filter(member => member.User.id !== Number(userId)) 
+            .map(member => ({
+              id: member.User.id,
+              loginName: member.User.loginName,
+              avatarUrl: member.User.avatarUrl
+            }));
+            this.InformationUser = ListUserServerData.Members
+            ?.find(member => member.User.id === Number(userId)) 
+            ?.User || null;
+          chatNamespace
+          .to(chatRoomId)
+          .emit("ListChannelUser", this.ListUserChannel);
+        }
+      }
+
       socket.on("sendMessage", async (messageData) => {
         this.messageQueue.add(async () => {
           const { message } = messageData;
@@ -48,6 +92,14 @@ export class ChatChannelController {
             Number(channelId),
             String(encrypted),
           );
+
+          if(this.ListUserChannel.length > 0) {
+            await this.notiRepo.sendPushNotificationMany(
+              this.ListUserChannel,
+              `Có 1 tin nhắn từ channel ${InformationChannel?.name}`,
+              `${this.InformationUser?.loginName}: ${messageData}`
+            );
+          }
 
           const decryptedMessage = {
             ...savedMessage,
@@ -110,6 +162,23 @@ export class ChatChannelController {
             console.log("Error marking message as read:", error);
           }
         });
+      });
+
+      socket.on("deleteMessage", async ({ messageId }) => {
+        if (!messageId) return;
+
+        const message = await this.chatChanelRepo.getMessageById(messageId);
+        if (!message) return;
+
+        // Chỉ cho phép sender xoá tin nhắn
+        if (message.senderId !== Number(userId)) {
+          console.log("❌ Không thể xoá tin nhắn của người khác");
+          return;
+        }
+
+        await this.chatChanelRepo.deleteMessageById(messageId);
+
+        chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id);
       });
 
       socket.on("disconnect", async () => {
