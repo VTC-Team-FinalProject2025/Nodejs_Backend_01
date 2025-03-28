@@ -263,4 +263,33 @@ export default class ChatChannelRepository {
       },
     });
   }
+
+  getDetailChannelById = async (id: number) => {
+    return await this.prisma.channel.findUnique({
+      where: {
+        id,
+    },
+    })
+  }
+
+  getListUserServerById = async (id: number) => {
+    return await this.prisma.server.findUnique({
+        where: {
+            id
+        },
+        include: {
+            Members: {
+                include: {
+                    User: {
+                        select: {
+                            id: true,
+                            loginName: true,
+                            avatarUrl: true,
+                        }
+                    },
+                },
+            },
+        }
+    });
+}
 }
