@@ -1,0 +1,10 @@
+model Hidden_message_channel {
+    id        Int @id @default(autoincrement())
+    userId    Int
+    messageId Int
+
+    User           Users   @relation(fields: [userId], references: [id])
+    MessageChannel Message @relation(fields: [messageId], references: [id])
+
+    @@unique([userId, messageId])
+}

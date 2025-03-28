@@ -1,0 +1,11 @@
+model Icon_message_channel {
+    id        Int     @id @default(autoincrement())
+    userId    Int
+    messageId Int
+    icon      String?
+
+    User    Users   @relation(fields: [userId], references: [id])
+    Message Message @relation(fields: [messageId], references: [id])
+
+    @@unique([userId, messageId])
+}
