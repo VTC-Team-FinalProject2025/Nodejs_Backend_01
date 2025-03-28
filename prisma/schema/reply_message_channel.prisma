@@ -1,0 +1,11 @@
+model Reply_message_channel {
+    id             Int @id @default(autoincrement())
+    messageId      Int
+    replyMessageId Int
+
+    Message      Message @relation("ReplyReceiver", fields: [messageId], references: [id])
+    ReplyMessage Message @relation("ReplySender", fields: [replyMessageId], references: [id])
+
+    @@unique([messageId, replyMessageId])
+    @@map("reply_message_channel")
+}

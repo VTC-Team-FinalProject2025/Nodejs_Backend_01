@@ -291,5 +291,44 @@ export default class ChatChannelRepository {
             },
         }
     });
-}
+  }
+  async SaveHiddenMessage(userId: number, messageId: number) {
+    return await this.prisma.hidden_message_channel.create({
+      data: { userId, messageId },
+    });
+  }
+
+  async SaveIconMessage(userId: number, messageId: number, icon: string) {
+    return await this.prisma.icon_message_channel.create({
+      data: { userId, messageId, icon },
+    });
+  }
+  async GetIconMessageId(id: number) {
+    return await this.prisma.icon_message_channel.findUnique({
+      where: { id },
+    });
+  }
+
+  async DeleteIconMessageById(id: number) {
+    return await this.prisma.icon_message_channel.delete({
+      where: { id },
+    });
+  }
+
+  async UpdateIconMessage(userId: number, id: number, newIcon: string) {
+    await this.prisma.icon_message_channel.updateMany({
+      where: { id, userId },
+      data: { icon: newIcon },
+    });
+  
+    return await this.prisma.icon_message_channel.findFirst({
+      where: { id, userId },
+      select: {
+        id: true,
+        userId: true,
+        icon: true,
+        messageId: true,
+      },
+    });
+  }
 }

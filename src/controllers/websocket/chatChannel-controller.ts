@@ -164,6 +164,46 @@ export class ChatChannelController {
         });
       });
 
+      socket.on("hiddenMessage", async ({ messageId }) => {
+        if (!messageId) return;
+
+        const message = await this.chatChanelRepo.getMessageById(messageId);
+        if (!message) return;
+
+        await this.chatChanelRepo.SaveHiddenMessage(Number(userId),messageId);
+        chatNamespace.to(chatRoomId).emit("statusHiddenMessage", message.id);
+      })
+
+      socket.on("IconMessage", async ({ messageId, icon }) => {
+        if (!messageId || !icon) return;
+
+        const IconMessage = await this.chatChanelRepo.SaveIconMessage(Number(userId), messageId, icon);
+
+        chatNamespace.to(chatRoomId).emit("dataIconMessage", IconMessage);
+      })
+
+      socket.on("UpdateIconMessage", async ({ id, newIcon }) => {
+        if (!id || !newIcon) return;
+        
+        const getIconMessage = await this.chatChanelRepo.GetIconMessageId(Number(id));
+        if (!getIconMessage) return;
+
+        const IconMessage = await this.chatChanelRepo.UpdateIconMessage(Number(userId), id, newIcon);
+
+        chatNamespace.to(chatRoomId).emit("dataUpdateIconMessage", IconMessage);
+      })
+
+      socket.on("DeleteIconMessage", async ({ id }) => {
+        if (!id) return;
+
+        const getIconMessage = await this.chatChanelRepo.GetIconMessageId(Number(id));
+        if (!getIconMessage) return;
+
+        this.chatChanelRepo.DeleteIconMessageById(getIconMessage.id)
+
+        chatNamespace.to(chatRoomId).emit("dataDeleteIconMessage", id);
+      })
+
       socket.on("deleteMessage", async ({ messageId }) => {
         if (!messageId) return;
 
