@@ -14,5 +14,8 @@ model Message {
 
   IconMessagesChannel Icon_message_channel[]
 
+  RepliesSent     Reply_message_channel[] @relation("ReplySender")
+  RepliesReceived Reply_message_channel[] @relation("ReplyReceiver")
+
   @@map("message")
 }
