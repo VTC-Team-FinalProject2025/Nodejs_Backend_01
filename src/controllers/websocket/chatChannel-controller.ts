@@ -21,6 +21,15 @@ interface InformationChannel {
   password: string | null;
 }
 
+interface SendMessage {
+  id: number;
+  message: string;
+  replyMessage?: {
+    replyMessageId: number | null;
+    contentReply: string;
+  };
+}
+
 export class ChatChannelController {
   private readonly io: Server;
   private readonly chatChanelRepo: ChatChannelRepository;
@@ -82,9 +91,10 @@ export class ChatChannelController {
         }
       }
 
-      socket.on("sendMessage", async (messageData) => {
+      socket.on("sendMessage", async (messageData: SendMessage) => {
         this.messageQueue.add(async () => {
-          const { message } = messageData;
+          const { id ,message, replyMessage } = messageData;
+          console.log()
           if (!message) return;
           const encrypted = encrypt(message);
           const savedMessage = await this.chatChanelRepo.saveMessage(
@@ -92,6 +102,50 @@ export class ChatChannelController {
             Number(channelId),
             String(encrypted),
           );
+
+          if (replyMessage && replyMessage.replyMessageId !== null) {
+            await this.chatChanelRepo.SaveReplyMessage(
+              savedMessage.id,
+              replyMessage.replyMessageId,
+            );
+          }
+
+          const fullSavedMessage = await this.chatChanelRepo.getMessageById(
+            savedMessage.id,
+          );
+          if (!fullSavedMessage) {
+            console.log(`Không tìm thấy tin nhắn với ID: ${savedMessage.id}`);
+            return;
+          }
+
+          const decryptedMessage = {
+            ...fullSavedMessage,
+            content: decrypt(fullSavedMessage.content),
+            waitingId: id,
+            RepliesReceived:
+              fullSavedMessage.RepliesReceived.length > 0
+                ? {
+                    replyMessageId:
+                      fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                      null,
+                    ReplyMessage: {
+                      id:
+                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
+                        null,
+                      content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                        ?.content
+                        ? decrypt(
+                            fullSavedMessage.RepliesReceived[0].ReplyMessage
+                              .content,
+                          )
+                        : null,
+                      senderId:
+                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                          ?.senderId ?? null,
+                    },
+                  }
+                : null,
+          };
 
           if(this.ListUserChannel.length > 0) {
             await this.notiRepo.sendPushNotificationMany(
@@ -101,10 +155,6 @@ export class ChatChannelController {
             );
           }
 
-          const decryptedMessage = {
-            ...savedMessage,
-            content: decrypt(savedMessage.content),
-          };
 
           chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
         });
@@ -117,6 +167,7 @@ export class ChatChannelController {
           messageId
         );
         if (!message) return;
+ 
 
         // Chỉ cho phép sender xoá tin nhắn
         if (message.senderId !== Number(userId)) {
@@ -124,7 +175,7 @@ export class ChatChannelController {
           return;
         }
 
-        await this.chatChanelRepo.deleteMessageById(messageId);
+        await this.chatChanelRepo.deleteMessageById(message.id);
 
         chatNamespace.to(chatRoomId).emit("statusDeleMessage", message.id);
       });

@@ -45,13 +45,14 @@ export default class MessageChannelController extends BaseController {
     next: express.NextFunction,
   ) => {
     try {
-      const { page = 1, limit = 20, channelId } = request.query;
+      const { page = 1, limit = 20, channelId, userId } = request.query;
       const pageSize = Number(limit);
 
       const messages = await this.chatChanelRepo.getMessages(
         Number(channelId),
         Number(page),
-        pageSize
+        pageSize,
+        Number(userId)
       );
       response.json(messages);
     } catch (error) {
