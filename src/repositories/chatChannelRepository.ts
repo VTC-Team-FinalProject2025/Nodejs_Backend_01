@@ -45,10 +45,16 @@ export default class ChatChannelRepository {
     channelId: number,
     page: number = 1,
     pageSize: number = 20,
+    userId: number,
   ) {
     const messages = await this.prisma.message.findMany({
       where: {
         channelId,
+        NOT: {
+          HiddenMessages: {
+            some: { userId },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -79,13 +85,51 @@ export default class ChatChannelRepository {
             },
           },
         },
+        RepliesReceived: {
+          select: {
+            replyMessageId: true,
+            ReplyMessage: {
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+              },
+            },
+          },
+        },
+        IconMessages: {
+          select: {
+            id: true,
+            userId: true,
+            messageId: true,
+            icon: true,
+          },
+        },
+        
       },
     });
+
     return messages.map((msg) => ({
       ...msg,
       content: decrypt(msg.content),
+      RepliesReceived:
+        msg.RepliesReceived.length > 0
+          ? {
+              replyMessageId: msg.RepliesReceived[0]?.replyMessageId ?? null,
+              ReplyMessage: {
+                id: msg.RepliesReceived[0]?.ReplyMessage?.id ?? null,
+                content: msg.RepliesReceived[0]?.ReplyMessage?.content
+                  ? decrypt(msg.RepliesReceived[0].ReplyMessage.content)
+                  : null,
+                senderId:
+                  msg.RepliesReceived[0]?.ReplyMessage?.senderId ?? null,
+              },
+            }
+          : null,
     }));
   }
+
+  
 
   async markMessagesAsRead(userId: number, messageId: number) {
     return this.prisma.messageReadChannel.upsert({
@@ -251,15 +295,69 @@ export default class ChatChannelRepository {
   }
 
   async deleteMessageById(messageId: number) {
-    return await this.prisma.message.delete({
-      where: { id: messageId },
-    });
+    await this.prisma.$transaction([
+      this.prisma.messageReadChannel.deleteMany({ where: { messageId } }),
+      this.prisma.hidden_message_channel.deleteMany({ where: { messageId } }),
+      this.prisma.icon_message_channel.deleteMany({ where: { messageId } }),
+      this.prisma.reply_message_channel.deleteMany({ where: {  messageId } }),
+
+      this.prisma.message.delete({ where: { id: messageId } }),
+    ]);
+
+    return { success: true };
   }
 
   async getMessageById(messageId: number) {
     return await this.prisma.message.findFirst({
       where: {
         id: messageId,
+      },
+      include: {
+        Sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            loginName: true,
+            avatarUrl: true,
+          },
+        },
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+        RepliesReceived: {
+          select: {
+            replyMessageId: true,
+            ReplyMessage: {
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+              },
+            },
+          },
+        },
+        IconMessages: {
+          select: {
+            id: true,
+            userId: true,
+            messageId: true,
+            icon: true,
+          },
+        },
       },
     });
   }
@@ -329,6 +427,11 @@ export default class ChatChannelRepository {
         icon: true,
         messageId: true,
       },
+    });
+  }
+  async SaveReplyMessage(messageId: number, replyMessageId: number) {
+    return await this.prisma.reply_message_channel.create({
+      data: { messageId, replyMessageId },
     });
   }
 }
