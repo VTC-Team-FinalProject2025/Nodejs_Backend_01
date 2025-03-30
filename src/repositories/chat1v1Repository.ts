@@ -294,8 +294,25 @@ export default class Chat1v1Repository {
   }
 
   async DeleteIconMessageById(id: number) {
-    return await this.prisma.direct_message.delete({
+    return await this.prisma.icon_direct_message.delete({
       where: { id },
+    });
+  }
+
+  async UpdateIconMessage(userId: number, id: number, newIcon: string) {
+    await this.prisma.icon_direct_message.updateMany({
+      where: { id, userId },
+      data: { icon: newIcon },
+    });
+  
+    return await this.prisma.icon_direct_message.findFirst({
+      where: { id, userId },
+      select: {
+        id: true,
+        userId: true,
+        icon: true,
+        messageId: true,
+      },
     });
   }
 }

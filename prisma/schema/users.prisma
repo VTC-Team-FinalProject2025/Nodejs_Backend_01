@@ -33,7 +33,11 @@ model Users {
 
   HiddenMessages Hidden_direct_message[]
 
+  HiddenMessagesChannel Hidden_message_channel[]
+
   IconMessages Icon_direct_message[]
+
+  IconMessagesChannel Icon_message_channel[]
 
   @@map("users")
 }

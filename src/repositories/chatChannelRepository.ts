@@ -45,10 +45,16 @@ export default class ChatChannelRepository {
     channelId: number,
     page: number = 1,
     pageSize: number = 20,
+    userId: number,
   ) {
     const messages = await this.prisma.message.findMany({
       where: {
         channelId,
+        NOT: {
+          HiddenMessages: {
+            some: { userId },
+          },
+        },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
@@ -79,13 +85,51 @@ export default class ChatChannelRepository {
             },
           },
         },
+        RepliesReceived: {
+          select: {
+            replyMessageId: true,
+            ReplyMessage: {
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+              },
+            },
+          },
+        },
+        IconMessages: {
+          select: {
+            id: true,
+            userId: true,
+            messageId: true,
+            icon: true,
+          },
+        },
+        
       },
     });
+
     return messages.map((msg) => ({
       ...msg,
       content: decrypt(msg.content),
+      RepliesReceived:
+        msg.RepliesReceived.length > 0
+          ? {
+              replyMessageId: msg.RepliesReceived[0]?.replyMessageId ?? null,
+              ReplyMessage: {
+                id: msg.RepliesReceived[0]?.ReplyMessage?.id ?? null,
+                content: msg.RepliesReceived[0]?.ReplyMessage?.content
+                  ? decrypt(msg.RepliesReceived[0].ReplyMessage.content)
+                  : null,
+                senderId:
+                  msg.RepliesReceived[0]?.ReplyMessage?.senderId ?? null,
+              },
+            }
+          : null,
     }));
   }
+
+  
 
   async markMessagesAsRead(userId: number, messageId: number) {
     return this.prisma.messageReadChannel.upsert({
@@ -251,9 +295,16 @@ export default class ChatChannelRepository {
   }
 
   async deleteMessageById(messageId: number) {
-    return await this.prisma.message.delete({
-      where: { id: messageId },
-    });
+    await this.prisma.$transaction([
+      this.prisma.messageReadChannel.deleteMany({ where: { messageId } }),
+      this.prisma.hidden_message_channel.deleteMany({ where: { messageId } }),
+      this.prisma.icon_message_channel.deleteMany({ where: { messageId } }),
+      this.prisma.reply_message_channel.deleteMany({ where: {  messageId } }),
+
+      this.prisma.message.delete({ where: { id: messageId } }),
+    ]);
+
+    return { success: true };
   }
 
   async getMessageById(messageId: number) {
@@ -261,6 +312,126 @@ export default class ChatChannelRepository {
       where: {
         id: messageId,
       },
+      include: {
+        Sender: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            loginName: true,
+            avatarUrl: true,
+          },
+        },
+        Readers: {
+          select: {
+            userId: true,
+            messageId: true,
+            readAt: true,
+            User: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                loginName: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        },
+        RepliesReceived: {
+          select: {
+            replyMessageId: true,
+            ReplyMessage: {
+              select: {
+                id: true,
+                content: true,
+                senderId: true,
+              },
+            },
+          },
+        },
+        IconMessages: {
+          select: {
+            id: true,
+            userId: true,
+            messageId: true,
+            icon: true,
+          },
+        },
+      },
+    });
+  }
+
+  getDetailChannelById = async (id: number) => {
+    return await this.prisma.channel.findUnique({
+      where: {
+        id,
+    },
+    })
+  }
+
+  getListUserServerById = async (id: number) => {
+    return await this.prisma.server.findUnique({
+        where: {
+            id
+        },
+        include: {
+            Members: {
+                include: {
+                    User: {
+                        select: {
+                            id: true,
+                            loginName: true,
+                            avatarUrl: true,
+                        }
+                    },
+                },
+            },
+        }
+    });
+  }
+  async SaveHiddenMessage(userId: number, messageId: number) {
+    return await this.prisma.hidden_message_channel.create({
+      data: { userId, messageId },
+    });
+  }
+
+  async SaveIconMessage(userId: number, messageId: number, icon: string) {
+    return await this.prisma.icon_message_channel.create({
+      data: { userId, messageId, icon },
+    });
+  }
+  async GetIconMessageId(id: number) {
+    return await this.prisma.icon_message_channel.findUnique({
+      where: { id },
+    });
+  }
+
+  async DeleteIconMessageById(id: number) {
+    return await this.prisma.icon_message_channel.delete({
+      where: { id },
+    });
+  }
+
+  async UpdateIconMessage(userId: number, id: number, newIcon: string) {
+    await this.prisma.icon_message_channel.updateMany({
+      where: { id, userId },
+      data: { icon: newIcon },
+    });
+  
+    return await this.prisma.icon_message_channel.findFirst({
+      where: { id, userId },
+      select: {
+        id: true,
+        userId: true,
+        icon: true,
+        messageId: true,
+      },
+    });
+  }
+  async SaveReplyMessage(messageId: number, replyMessageId: number) {
+    return await this.prisma.reply_message_channel.create({
+      data: { messageId, replyMessageId },
     });
   }
 }

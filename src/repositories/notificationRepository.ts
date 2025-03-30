@@ -7,6 +7,12 @@ type NotificationCreateInput = {
   type: TypeStatusNotification;
 };
 
+interface ListUserChannel {
+  id: number;
+  loginName: string; 
+  avatarUrl: string | null;
+}
+
 export default class NotificationRepository {
   public prisma: PrismaClient;
   constructor(prisma: PrismaClient) {
@@ -35,6 +41,32 @@ export default class NotificationRepository {
     };
 
     return await firebaseAdmin.messaging().sendEachForMulticast(payload);
+  }
+
+  async sendPushNotificationMany(listUser: ListUserChannel[],contentTitle: string, message: string) {
+    listUser.map(async(user) => {
+      const tokens = await this.prisma.tokenNotification.findMany({
+        where: { userId: user.id },
+        select: { token: true },
+      });
+  
+      const validTokens = tokens.map((t) => t.token).filter(Boolean);
+  
+      if (validTokens.length === 0) {
+        console.log(`Không có token hợp lệ cho user ${user.id}`);
+        return;
+      }
+  
+      const payload: MulticastMessage = {
+        notification: {
+          title: contentTitle,
+          body: message,
+        },
+        tokens: validTokens,
+      };
+  
+      return await firebaseAdmin.messaging().sendEachForMulticast(payload);
+    })
   }
   async createNotification(data: NotificationCreateInput) {
     const notification = await this.prisma.notification.create({

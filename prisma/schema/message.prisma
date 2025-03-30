@@ -6,9 +6,16 @@ model Message {
   createdAt DateTime @default(now())
 
   Channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  Sender  Users   @relation("UserMessages", fields: [senderId], references: [id])
+  Sender  Users   @relation("UserMessages", fields: [senderId], references: [id], onDelete: Cascade)
 
-  Readers MessageReadChannel[] 
+  Readers MessageReadChannel[]
+
+  HiddenMessages Hidden_message_channel[]
+
+  IconMessages Icon_message_channel[]
+
+  RepliesSent     Reply_message_channel[] @relation("ReplySender")
+  RepliesReceived Reply_message_channel[] @relation("ReplyReceiver")
 
   @@map("message")
 }
