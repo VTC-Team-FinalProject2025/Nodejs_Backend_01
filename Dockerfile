@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     libvips-dev \
     && rm -rf /var/lib/apt/lists/*
 # Sao chép package.json và cài đặt dependencies
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 RUN npm install --force @img/sharp-linux-x64
 
