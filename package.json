@@ -8,7 +8,7 @@
     "predev": "npm run build",
     "dev": "cross-env NODE_ENV=development concurrently \"tsc --watch\" \"npx nodemon\"",
     "prestart": "npm run build",
-    "start": "cross-env NODE_ENV=production node dist/index.js",
+    "start": "cross-env NODE_ENV=production node dist/src/index.js",
     "test": "jest",
     "deploy": "npx prisma migrate deploy && npm run start",
     "push": "npx prisma db push",
@@ -21,7 +21,7 @@
     "url": "git+https://github.com/kienmatu/express-prisma-typescript-boilerplate.git"
   },
   "dependencies": {
-    "@prisma/client": "^6.3.1",
+    "@prisma/client": "^6.5.0",
     "@types/express": "^4.17.13",
     "@types/node": "^17.0.21",
     "@types/socket.io": "^3.0.1",
@@ -40,7 +40,6 @@
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
-    "prisma": "^6.3.1",
     "redis": "^4.7.0",
     "rimraf": "^3.0.2",
     "sharp": "^0.33.5",
@@ -69,6 +68,7 @@
     "concurrently": "^7.0.0",
     "jest": "^29.7.0",
     "nodemon": "^2.0.15",
+    "prisma": "^6.5.0",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.6"
   }

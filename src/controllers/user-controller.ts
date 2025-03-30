@@ -11,6 +11,7 @@ import {
   UpdateNameFormSchema,
   UpdatePasswordFormSchema,
 } from "../schemas/user";
+import JWT from "../helpers/JWT";
 
 export default class UserController extends BaseController {
   private readonly userRepo: UserRepository;
@@ -39,6 +40,7 @@ export default class UserController extends BaseController {
       validateSchema(UpdatePasswordFormSchema),
       this.updatePassword,
     );
+    this.router.get("/get-call-token", this.getCallToken);
   }
 
   private readonly updateLoginName = async (
@@ -118,4 +120,38 @@ export default class UserController extends BaseController {
     });
     res.status(200).json({ message: "Password changed successfully" });
   };
+
+  private readonly getCallToken = async (
+    req: express.Request,
+    res: express.Response,
+    next: express.NextFunction,
+  ) => {
+    try {
+      const { userId } = req.user;
+      const { to } = req.query;
+      const user = await this.userRepo.getUserById(userId);
+      if (!user) return next(new HttpException(404, "User not found"));
+
+      let token = JWT.generateToken({
+        iss: "jitsi-vtc",
+        aud: "jitsi",
+        sub: "jitsi-vtc.duckdns.org",
+        room: "call-" + userId + "-" + to,
+        context: {
+          user: {
+            id: userId,
+            name: user.loginName,
+            avatar: user.avatarUrl || "https://robohash.org/" + user.loginName,
+          }
+        }
+      }, "SERVER_ACCESS");
+
+      return res.status(200).json({
+        token: token,
+        room: "call-" + userId + "-" + to,
+      })
+    } catch (error) {
+      return next(new HttpException(500, "Internal server error"));
+    }
+  }
 }

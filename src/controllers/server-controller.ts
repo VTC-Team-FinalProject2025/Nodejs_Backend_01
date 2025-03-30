@@ -89,26 +89,43 @@ export default class FileController extends BaseController {
     const { id } = req.params;
     const { userId } = req.user;
     try {
+      console.time("getServerById");
       const server = await this.serverRepo.getServerById(Number(id));
+      console.timeEnd("getServerById");
       if (!server) {
         return next(new HttpException(404, "Server not found"));
       }
-      if (!server.Members.find(async (member) => member.User.id === userId)) {
+      const Roles = server?.Roles.map((role) => {
+        return {
+          id: role.id,
+          name: role.name,
+          color: role.color,
+          permissions: role.RolePermissions.map((p) => p.Permission.name),
+        }
+      });
+
+      if (!server.Members.find((member) => member.User.id === userId)) {
         return next(new HttpException(403, "You are not a member of this server"));
       };
+
       const roleId = server.Members.find((member) => member.User.id === userId)?.roleId;
       if (!roleId) return next(new HttpException(403, "You are not a member of this server"));
-      let permissions = await this.roleRepository.getPermissionsOfRole(roleId);
-      let permissionStrings = permissions.map((p) => p.name);
-      if (server.ownerId === userId) permissionStrings.push("owner");
+
+
+      let permissions = server.Roles.find((role) => role.id === roleId)?.RolePermissions;
+      let permissionStrings = permissions?.map((p) => p.Permission.name);
+      if (server.ownerId === userId && permissionStrings) permissionStrings.push("owner");
+      if (server.ownerId === userId && !permissionStrings) permissionStrings = ["owner"];
       const payload: ServerAccessTokenPayload = {
         serverId: Number(id),
         userId: userId,
         roleId: roleId,
-        permissions: permissionStrings,
+        permissions: permissionStrings ? permissionStrings : [],
       }
       const serverToken = JWT.generateToken(payload, "SERVER_ACCESS");
       CookieHelper.setCookie(CookieKeys.SERVER_TOKEN, serverToken, res);
+
+
       let Channels = await this.channelRepo.getChannelsByServerId(Number(id));
       Channels = Channels.map((channel) => {
         if (channel.password) {
@@ -116,7 +133,7 @@ export default class FileController extends BaseController {
         }
         return channel;
       });
-      res.status(200).json({ ...server, Channels: Channels });
+      res.status(200).json({ ...server, Channels: Channels, Roles: Roles });
     } catch (error) {
       new HttpException(500, "Failed to retrieve server");
     }

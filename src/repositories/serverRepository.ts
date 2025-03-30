@@ -68,25 +68,29 @@ export default class ServerRepository {
     }
     getServerById = async (id: number) => {
         return await this.prisma.server.findUnique({
-            where: {
-                id
-            },
-            include: {
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                createdAt: true,
+                ownerId: true,
+                iconUrl: true,
                 Members: {
+                    take: 20,
                     include: {
                         User: {
                             select: {
                                 id: true,
                                 loginName: true,
                                 avatarUrl: true,
-                            }
+                            },
                         },
                         Role: {
                             select: {
                                 id: true,
                                 name: true,
                                 color: true,
-                            }
+                            },
                         },
                     },
                 },
@@ -95,18 +99,27 @@ export default class ServerRepository {
                         id: true,
                         name: true,
                         color: true,
-                    }
+                        RolePermissions: {
+                            select: {
+                                Permission: {
+                                    select: {
+                                        id: true,
+                                        name: true,
+                                    },
+                                },
+                            },
+                        },
+                    },
                 },
                 InviteLink: {
                     select: {
                         id: true,
-                        count: true,
                         token: true,
                         createdAt: true,
                         expireAt: true,
-                    }
-                }
-            }
+                    },
+                },
+            },
         });
     }
     getServersByUserId = async (userId: number) => {
@@ -117,19 +130,9 @@ export default class ServerRepository {
                         userId: userId
                     }
                 }
-            },
-            include: {
-                Channels: {
-                    select: { id: true },
-                    take: 1
-                }
             }
         });
-    
-        return servers.map(({ Channels, ...server }) => ({
-            ...server,
-            channelsFirstly: Channels.length > 0 ? Channels[0].id : null
-        }));
+        return servers;
     };
     deleteServer = async (id: number) => {
         return await this.prisma.server.delete({
