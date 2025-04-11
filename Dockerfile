@@ -26,6 +26,8 @@ COPY . .
 # Cài lại bcrypt để phù hợp với hệ thống
 RUN npm rebuild bcrypt --build-from-source
 
+COPY prisma ./schema
+
 # # Cài đặt lại sharp đúng nền tảng
 # RUN npm rebuild sharp --force
 RUN npx prisma generate
