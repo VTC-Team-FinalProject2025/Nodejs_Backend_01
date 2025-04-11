@@ -6,7 +6,12 @@ import NotificationRepository from "../../repositories/notificationRepository";
 import UserRepository from "../../repositories/UserRepository";
 import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
+import { FileTypeDirectStatus } from "@prisma/client";
 
+interface previewFiles {
+  url: string;
+  type: FileTypeDirectStatus;
+}
 interface SendMessage {
   id: number;
   senderId: number;
@@ -16,6 +21,7 @@ interface SendMessage {
     replyMessageId: number | null;
     contentReply: string;
   };
+  previewFiles?: previewFiles[] | null;
 }
 
 export class Chat1v1Controller {
@@ -71,8 +77,8 @@ export class Chat1v1Controller {
 
       socket.on("sendMessage", async (messageData: SendMessage) => {
         this.messageQueue.add(async () => {
-          const { id ,senderId, receiverId, message, replyMessage } = messageData;
-          if (!senderId || !receiverId || !message) return;
+          const { id ,senderId, receiverId, message, replyMessage, previewFiles } = messageData;
+          if (!senderId || !receiverId) return;
           const encrypted = encrypt(message);
 
           const savedMessage = await this.chat1v1Repo.saveMessage(
@@ -80,6 +86,13 @@ export class Chat1v1Controller {
             receiverId,
             String(encrypted),
           );
+          let ArrayFile: Awaited<ReturnType<typeof this.chat1v1Repo.createFile>>[] = [];
+          if(previewFiles && previewFiles?.length > 0) {
+            previewFiles.forEach(async (file) => {
+              const dataFile = await this.chat1v1Repo.createFile(Number(senderId), savedMessage.id, file.type, file.url);
+              ArrayFile.push(dataFile);
+            })
+          }
 
           if (replyMessage && replyMessage.replyMessageId !== null) {
             await this.chat1v1Repo.SaveReplyMessage(
@@ -98,6 +111,14 @@ export class Chat1v1Controller {
             ...fullSavedMessage,
             content: decrypt(fullSavedMessage.content),
             waitingId: id,
+            FileMessages: ArrayFile.length > 0
+            ? ArrayFile.map((file) => ({
+                userId: file.userId,
+                field: file.field,
+                fieldType: file.fieldType,
+                messageId: file.messageId
+              }))
+            : null,
             RepliesReceived:
               fullSavedMessage.RepliesReceived.length > 0
                 ? {
@@ -136,6 +157,7 @@ export class Chat1v1Controller {
             .emit("recentChatsList", receiverChats);
 
           chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
+          ArrayFile = [];
         });
       });
 
