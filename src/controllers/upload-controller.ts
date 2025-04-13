@@ -24,6 +24,10 @@ export default class FileController extends BaseController {
       this.upload.single("image"),
       this.uploadFile,
     );
+    this.router.post("/upload-media",
+      this.upload.single("media"),
+      this.uploadFileMedia,
+    );
   }
 
   private readonly uploadFile = async (
@@ -45,6 +49,35 @@ export default class FileController extends BaseController {
       );
 
       response.json({ message: "Photo uploaded successfully!", imageUrl });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private readonly uploadFileMedia = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    try {
+      if (!request.file) {
+        throw new FileUploadException("No file uploaded!");
+      }
+  
+      const folderName = request.body.folderName;
+      if (!folderName) {
+        throw new FileUploadException("Missing folder name!");
+      }
+  
+      const imageUrl = await this.fileRepository.uploadMedia(
+        request.file,
+        folderName,
+      );
+  
+      response.json({
+        message: "Photo uploaded successfully!",
+        imageUrl,
+      });
     } catch (error) {
       next(error);
     }

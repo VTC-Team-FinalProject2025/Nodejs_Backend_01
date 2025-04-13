@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import { decrypt } from "../helpers/Encryption";
+import {FileTypeDirectStatus} from "@prisma/client";
 
 export default class Chat1v1Repository {
   public prisma: PrismaClient;
@@ -74,12 +75,20 @@ export default class Chat1v1Repository {
             icon: true,
           },
         },
+        FileMessages: {
+          select: {
+            userId: true,
+            messageId: true,
+            fieldType: true,
+            field: true,
+          }
+        }
       },
     });
 
     return messages.map((msg) => ({
       ...msg,
-      content: decrypt(msg.content),
+      content: msg.content ? decrypt(msg.content) : null,
       RepliesReceived:
         msg.RepliesReceived.length > 0
           ? {
@@ -314,5 +323,10 @@ export default class Chat1v1Repository {
         messageId: true,
       },
     });
+  }
+  async createFile(userId: number, messageId: number, fieldType: FileTypeDirectStatus, field: string) {
+    return await this.prisma.file_direct_message.create({
+      data: {userId, messageId, fieldType, field}
+    })
   }
 }

@@ -2,7 +2,7 @@ model Message {
   id        Int      @id @default(autoincrement())
   channelId Int
   senderId  Int
-  content   String   @db.VarChar(10000)
+  content   String?   @db.VarChar(10000)
   createdAt DateTime @default(now())
 
   Channel Channel @relation(fields: [channelId], references: [id], onDelete: Cascade)
@@ -16,6 +16,8 @@ model Message {
 
   RepliesSent     Reply_message_channel[] @relation("ReplySender")
   RepliesReceived Reply_message_channel[] @relation("ReplyReceiver")
+
+  FileMessages File_message[]
 
   @@map("message")
 }

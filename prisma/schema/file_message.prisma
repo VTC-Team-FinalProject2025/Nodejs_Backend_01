@@ -1,0 +1,19 @@
+enum FileTypeStatus {
+    image
+    video
+    audio
+}
+
+model File_message {
+    id        Int            @id @default(autoincrement())
+    userId    Int
+    messageId Int
+    field     String
+    fieldType FileTypeStatus @default(image)
+    createdAt DateTime       @default(now())
+
+    User    Users          @relation(fields: [userId], references: [id])
+    Message Message @relation(fields: [messageId], references: [id])
+
+    @@map("File_message")
+}
