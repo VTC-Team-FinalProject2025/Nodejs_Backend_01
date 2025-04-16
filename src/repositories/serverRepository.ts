@@ -272,6 +272,17 @@ export default class ServerRepository {
                     userId: data.userId,
                     serverId: data.serverId,
                     roleId: role.id
+                },
+                include: {
+                    User: {
+                        select: {
+                            id: true,
+                            loginName: true,
+                            avatarUrl: true,
+                            firstName: true,
+                            lastName: true
+                        }
+                    }
                 }
             });
             const result = await Promise.all([decreaseCount, createrMemberShip]);
