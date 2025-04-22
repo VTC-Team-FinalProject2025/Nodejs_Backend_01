@@ -45,7 +45,7 @@ const app = new App(
       notiRepo,
       userRepo,
     ),
-    new ServerController(serverRepo, channelRepo, roleRepo, prismaClient),
+    new ServerController(serverRepo, channelRepo, roleRepo, prismaClient, notiRepo),
     new NotificationController(notiRepo, prismaClient),
     new ChannelController(channelRepo, serverRepo, userRepo),
     new UserController(userRepo),
