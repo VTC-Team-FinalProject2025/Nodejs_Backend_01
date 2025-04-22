@@ -1,0 +1,19 @@
+enum FileTypeDirectStatus {
+    image
+    video
+    audio
+}
+
+model File_direct_message {
+    id        Int            @id @default(autoincrement())
+    userId    Int
+    messageId Int
+    field     String
+    fieldType FileTypeDirectStatus @default(image)
+    createdAt DateTime       @default(now())
+
+    User    Users          @relation(fields: [userId], references: [id])
+    Message Direct_message @relation(fields: [messageId], references: [id])
+
+    @@map("File_direct_message")
+}

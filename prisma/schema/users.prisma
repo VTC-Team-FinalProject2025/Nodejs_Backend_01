@@ -23,7 +23,6 @@ model Users {
 
   serverMemberships Server_member[]
   SentMessages      Message[]       @relation("UserMessages")
-  UploadedFiles     File[]          @relation("UserFiles")
 
   OwnedServers Server[] @relation("UserServers")
 
@@ -38,6 +37,10 @@ model Users {
   IconMessages Icon_direct_message[]
 
   IconMessagesChannel Icon_message_channel[]
+
+
+  FileMessagesDirect File_direct_message[]
+  FileMessages File_message[]
 
   @@map("users")
 }

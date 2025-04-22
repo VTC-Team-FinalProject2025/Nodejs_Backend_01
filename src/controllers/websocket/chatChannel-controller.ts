@@ -4,11 +4,16 @@ import ChatChannelRepository from "../../repositories/chatChannelRepository";
 import NotificationRepository from "../../repositories/notificationRepository";
 import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
-import { TypeStatus } from "@prisma/client";
+import { TypeStatus, FileTypeStatus } from "@prisma/client";
+
+interface previewFiles {
+  url: string;
+  type: FileTypeStatus;
+}
 
 interface ListUserChannel {
   id: number;
-  loginName: string; 
+  loginName: string;
   avatarUrl: string | null;
 }
 
@@ -28,6 +33,7 @@ interface SendMessage {
     replyMessageId: number | null;
     contentReply: string;
   };
+  previewFiles?: previewFiles[] | null;
 }
 
 export class ChatChannelController {
@@ -38,7 +44,6 @@ export class ChatChannelController {
   private ListUserChannel: ListUserChannel[] = [];
   private InformationChannel!: InformationChannel;
   private InformationUser!: ListUserChannel | null;
-
 
   constructor(
     io: Server,
@@ -68,40 +73,62 @@ export class ChatChannelController {
       socket.join(chatRoomId);
       console.log(`✅ User ${userId} joined ${chatRoomId}`);
 
-      const InformationChannel = await this.chatChanelRepo.getDetailChannelById(Number(channelId));
+      const InformationChannel = await this.chatChanelRepo.getDetailChannelById(
+        Number(channelId),
+      );
       if (InformationChannel) {
         this.InformationChannel = InformationChannel;
       }
-      if(InformationChannel) {
-        const ListUserServerData = await this.chatChanelRepo.getListUserServerById(InformationChannel.serverId);
+      if (InformationChannel) {
+        const ListUserServerData =
+          await this.chatChanelRepo.getListUserServerById(
+            InformationChannel.serverId,
+          );
         if (ListUserServerData && ListUserServerData.Members?.[0]?.User) {
-          this.ListUserChannel = ListUserServerData.Members
-            ?.filter(member => member.User.id !== Number(userId)) 
-            .map(member => ({
-              id: member.User.id,
-              loginName: member.User.loginName,
-              avatarUrl: member.User.avatarUrl
-            }));
-            this.InformationUser = ListUserServerData.Members
-            ?.find(member => member.User.id === Number(userId)) 
-            ?.User || null;
+          this.ListUserChannel = ListUserServerData.Members?.filter(
+            (member) => member.User.id !== Number(userId),
+          ).map((member) => ({
+            id: member.User.id,
+            loginName: member.User.loginName,
+            avatarUrl: member.User.avatarUrl,
+          }));
+          this.InformationUser =
+            ListUserServerData.Members?.find(
+              (member) => member.User.id === Number(userId),
+            )?.User || null;
           chatNamespace
-          .to(chatRoomId)
-          .emit("ListChannelUser", this.ListUserChannel);
+            .to(chatRoomId)
+            .emit("ListChannelUser", this.ListUserChannel);
         }
       }
 
       socket.on("sendMessage", async (messageData: SendMessage) => {
         this.messageQueue.add(async () => {
-          const { id ,message, replyMessage } = messageData;
-          console.log()
-          if (!message) return;
+          const { id, message, replyMessage, previewFiles } = messageData;
+          console.log("previewFiles", previewFiles)
+          if (!message && previewFiles?.length === 0) return;
           const encrypted = encrypt(message);
           const savedMessage = await this.chatChanelRepo.saveMessage(
             Number(userId),
             Number(channelId),
             String(encrypted),
           );
+
+          let ArrayFile: Awaited<
+            ReturnType<typeof this.chatChanelRepo.createFile>
+          >[] = [];
+
+          if (previewFiles && previewFiles?.length > 0) {
+            previewFiles.forEach(async (file) => {
+              const dataFile = await this.chatChanelRepo.createFile(
+                Number(userId),
+                savedMessage.id,
+                file.type,
+                file.url,
+              );
+              ArrayFile.push(dataFile);
+            });
+          }
 
           if (replyMessage && replyMessage.replyMessageId !== null) {
             await this.chatChanelRepo.SaveReplyMessage(
@@ -122,6 +149,15 @@ export class ChatChannelController {
             ...fullSavedMessage,
             content: decrypt(fullSavedMessage.content),
             waitingId: id,
+            FileMessages:
+              ArrayFile.length > 0
+                ? ArrayFile.map((file) => ({
+                    userId: file.userId,
+                    field: file.field,
+                    fieldType: file.fieldType,
+                    messageId: file.messageId,
+                  }))
+                : null,
             RepliesReceived:
               fullSavedMessage.RepliesReceived.length > 0
                 ? {
@@ -147,27 +183,24 @@ export class ChatChannelController {
                 : null,
           };
 
-          if(this.ListUserChannel.length > 0) {
+          if (this.ListUserChannel.length > 0) {
             await this.notiRepo.sendPushNotificationMany(
               this.ListUserChannel,
               `Có 1 tin nhắn từ channel ${InformationChannel?.name}`,
-              `${this.InformationUser?.loginName}: ${messageData}`
+              `${this.InformationUser?.loginName}: ${messageData}`,
             );
           }
 
-
           chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
+          ArrayFile = [];
         });
       });
 
       socket.on("deleteMessage", async ({ messageId }) => {
         if (!messageId) return;
 
-        const message = await this.chatChanelRepo.getMessageById(
-          messageId
-        );
+        const message = await this.chatChanelRepo.getMessageById(messageId);
         if (!message) return;
- 
 
         // Chỉ cho phép sender xoá tin nhắn
         if (message.senderId !== Number(userId)) {
@@ -221,39 +254,51 @@ export class ChatChannelController {
         const message = await this.chatChanelRepo.getMessageById(messageId);
         if (!message) return;
 
-        await this.chatChanelRepo.SaveHiddenMessage(Number(userId),messageId);
+        await this.chatChanelRepo.SaveHiddenMessage(Number(userId), messageId);
         chatNamespace.to(chatRoomId).emit("statusHiddenMessage", message.id);
-      })
+      });
 
       socket.on("IconMessage", async ({ messageId, icon }) => {
         if (!messageId || !icon) return;
 
-        const IconMessage = await this.chatChanelRepo.SaveIconMessage(Number(userId), messageId, icon);
+        const IconMessage = await this.chatChanelRepo.SaveIconMessage(
+          Number(userId),
+          messageId,
+          icon,
+        );
 
         chatNamespace.to(chatRoomId).emit("dataIconMessage", IconMessage);
-      })
+      });
 
       socket.on("UpdateIconMessage", async ({ id, newIcon }) => {
         if (!id || !newIcon) return;
-        
-        const getIconMessage = await this.chatChanelRepo.GetIconMessageId(Number(id));
+
+        const getIconMessage = await this.chatChanelRepo.GetIconMessageId(
+          Number(id),
+        );
         if (!getIconMessage) return;
 
-        const IconMessage = await this.chatChanelRepo.UpdateIconMessage(Number(userId), id, newIcon);
+        const IconMessage = await this.chatChanelRepo.UpdateIconMessage(
+          Number(userId),
+          id,
+          newIcon,
+        );
 
         chatNamespace.to(chatRoomId).emit("dataUpdateIconMessage", IconMessage);
-      })
+      });
 
       socket.on("DeleteIconMessage", async ({ id }) => {
         if (!id) return;
 
-        const getIconMessage = await this.chatChanelRepo.GetIconMessageId(Number(id));
+        const getIconMessage = await this.chatChanelRepo.GetIconMessageId(
+          Number(id),
+        );
         if (!getIconMessage) return;
 
-        this.chatChanelRepo.DeleteIconMessageById(getIconMessage.id)
+        this.chatChanelRepo.DeleteIconMessageById(getIconMessage.id);
 
         chatNamespace.to(chatRoomId).emit("dataDeleteIconMessage", id);
-      })
+      });
 
       socket.on("deleteMessage", async ({ messageId }) => {
         if (!messageId) return;
