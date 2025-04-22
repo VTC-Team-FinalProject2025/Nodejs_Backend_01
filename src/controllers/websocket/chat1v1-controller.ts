@@ -6,7 +6,12 @@ import NotificationRepository from "../../repositories/notificationRepository";
 import UserRepository from "../../repositories/UserRepository";
 import { decrypt, encrypt } from "../../helpers/Encryption";
 import PQueue from "p-queue";
+import { FileTypeDirectStatus } from "@prisma/client";
 
+interface previewFiles {
+  url: string;
+  type: FileTypeDirectStatus;
+}
 interface SendMessage {
   id: number;
   senderId: number;
@@ -16,6 +21,7 @@ interface SendMessage {
     replyMessageId: number | null;
     contentReply: string;
   };
+  previewFiles?: previewFiles[] | null;
 }
 
 export class Chat1v1Controller {
@@ -71,8 +77,16 @@ export class Chat1v1Controller {
 
       socket.on("sendMessage", async (messageData: SendMessage) => {
         this.messageQueue.add(async () => {
-          const { id ,senderId, receiverId, message, replyMessage } = messageData;
-          if (!senderId || !receiverId || !message) return;
+          const {
+            id,
+            senderId,
+            receiverId,
+            message,
+            replyMessage,
+            previewFiles,
+          } = messageData;
+          if (!senderId || !receiverId) return;
+          if (!message && previewFiles?.length === 0) return;
           const encrypted = encrypt(message);
 
           const savedMessage = await this.chat1v1Repo.saveMessage(
@@ -80,6 +94,20 @@ export class Chat1v1Controller {
             receiverId,
             String(encrypted),
           );
+          let ArrayFile: Awaited<
+            ReturnType<typeof this.chat1v1Repo.createFile>
+          >[] = [];
+          if (previewFiles && previewFiles?.length > 0) {
+            previewFiles.forEach(async (file) => {
+              const dataFile = await this.chat1v1Repo.createFile(
+                Number(senderId),
+                savedMessage.id,
+                file.type,
+                file.url,
+              );
+              ArrayFile.push(dataFile);
+            });
+          }
 
           if (replyMessage && replyMessage.replyMessageId !== null) {
             await this.chat1v1Repo.SaveReplyMessage(
@@ -98,28 +126,37 @@ export class Chat1v1Controller {
             ...fullSavedMessage,
             content: decrypt(fullSavedMessage.content),
             waitingId: id,
+            FileMessages:
+              ArrayFile.length > 0
+                ? ArrayFile.map((file) => ({
+                  userId: file.userId,
+                  field: file.field,
+                  fieldType: file.fieldType,
+                  messageId: file.messageId,
+                }))
+                : null,
             RepliesReceived:
               fullSavedMessage.RepliesReceived.length > 0
                 ? {
-                    replyMessageId:
-                      fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                  replyMessageId:
+                    fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                    null,
+                  ReplyMessage: {
+                    id:
+                      fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
                       null,
-                    ReplyMessage: {
-                      id:
-                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
-                        null,
-                      content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
-                        ?.content
-                        ? decrypt(
-                            fullSavedMessage.RepliesReceived[0].ReplyMessage
-                              .content,
-                          )
-                        : null,
-                      senderId:
-                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage
-                          ?.senderId ?? null,
-                    },
-                  }
+                    content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                      ?.content
+                      ? decrypt(
+                        fullSavedMessage.RepliesReceived[0].ReplyMessage
+                          .content,
+                      )
+                      : null,
+                    senderId:
+                      fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                        ?.senderId ?? null,
+                  },
+                }
                 : null,
           };
 
@@ -136,6 +173,7 @@ export class Chat1v1Controller {
             .emit("recentChatsList", receiverChats);
 
           chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
+          ArrayFile = [];
         });
       });
 
@@ -181,39 +219,51 @@ export class Chat1v1Controller {
         const message = await this.chat1v1Repo.getMessageById(messageId);
         if (!message) return;
 
-        await this.chat1v1Repo.SaveHiddenMessage(Number(userId),messageId);
+        await this.chat1v1Repo.SaveHiddenMessage(Number(userId), messageId);
         chatNamespace.to(chatRoomId).emit("statusHiddenMessage", message.id);
-      })
+      });
 
       socket.on("IconMessage", async ({ messageId, icon }) => {
         if (!messageId || !icon) return;
 
-        const IconMessage = await this.chat1v1Repo.SaveIconMessage(Number(userId), messageId, icon);
+        const IconMessage = await this.chat1v1Repo.SaveIconMessage(
+          Number(userId),
+          messageId,
+          icon,
+        );
 
         chatNamespace.to(chatRoomId).emit("dataIconMessage", IconMessage);
-      })
+      });
 
       socket.on("UpdateIconMessage", async ({ id, newIcon }) => {
         if (!id || !newIcon) return;
-        
-        const getIconMessage = await this.chat1v1Repo.GetIconMessageId(Number(id));
+
+        const getIconMessage = await this.chat1v1Repo.GetIconMessageId(
+          Number(id),
+        );
         if (!getIconMessage) return;
 
-        const IconMessage = await this.chat1v1Repo.UpdateIconMessage(Number(userId), id, newIcon);
+        const IconMessage = await this.chat1v1Repo.UpdateIconMessage(
+          Number(userId),
+          id,
+          newIcon,
+        );
 
         chatNamespace.to(chatRoomId).emit("dataUpdateIconMessage", IconMessage);
-      })
+      });
 
       socket.on("DeleteIconMessage", async ({ id }) => {
         if (!id) return;
 
-        const getIconMessage = await this.chat1v1Repo.GetIconMessageId(Number(id));
+        const getIconMessage = await this.chat1v1Repo.GetIconMessageId(
+          Number(id),
+        );
         if (!getIconMessage) return;
 
-        this.chat1v1Repo.DeleteIconMessageById(getIconMessage.id)
+        this.chat1v1Repo.DeleteIconMessageById(getIconMessage.id);
 
         chatNamespace.to(chatRoomId).emit("dataDeleteIconMessage", id);
-      })
+      });
     });
   }
 }

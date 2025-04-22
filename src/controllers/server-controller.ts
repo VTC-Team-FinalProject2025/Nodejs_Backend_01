@@ -15,6 +15,7 @@ import JWT, { ServerAccessTokenPayload } from "../helpers/JWT";
 import UserRepository from "../repositories/UserRepository";
 import { channel } from "diagnostics_channel";
 import RoleRepository from "../repositories/roleRepository";
+import NotificationRepository from "../repositories/notificationRepository";
 
 export default class FileController extends BaseController {
   private serverRepo: ServerRepository;
@@ -22,17 +23,19 @@ export default class FileController extends BaseController {
   private fileRepository: FileRepository;
   private userRepo: UserRepository;
   private roleRepository: RoleRepository;
+  private notiRepo: NotificationRepository;
   private upload = multer({
     storage: multer.memoryStorage(),
     limits: { fileSize: 5 * 1024 * 1024 },
   });
 
-  constructor(serverRepo: ServerRepository, channelRepo: ChannelRepository, roleRepository: RoleRepository, prisma: PrismaClient) {
+  constructor(serverRepo: ServerRepository, channelRepo: ChannelRepository, roleRepository: RoleRepository, prisma: PrismaClient, notiRepo: NotificationRepository) {
     super();
     this.serverRepo = serverRepo;
     this.channelRepo = channelRepo;
     this.roleRepository = roleRepository;
     this.fileRepository = new FileRepository();
+    this.notiRepo = notiRepo;
     this.userRepo = new UserRepository(prisma);
     this.path = "/servers";
     this.initializeRoutes();
@@ -212,7 +215,17 @@ export default class FileController extends BaseController {
       }
       let member;
       try {
-        member = await this.serverRepo.joinServer({ userId, serverId: server.id });
+         member = await this.serverRepo.joinServer({ userId, serverId: server.id });
+        if(member) {
+          const getServer = await this.serverRepo.getServerById(server.id);
+          if(getServer) {
+            await this.notiRepo.createNotification({
+              userId: server.ownerId,
+              message: `Thành viên ${member.User.loginName} đã tham gia server "${getServer.name}" của bạn.`,
+              type: "server",
+            })
+          }
+        }
       } catch (error: any) {
         console.log(error);
         return next(new HttpException(400, error.message));

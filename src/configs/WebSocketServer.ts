@@ -9,6 +9,7 @@ import Chat1v1Repository from "../repositories/chat1v1Repository";
 import { ServerController } from "../controllers/websocket/server-controller";
 import UserRepository from "../repositories/UserRepository";
 import ChatChannelRepository from "../repositories/chatChannelRepository";
+import { Call1v1Controller } from "../controllers/websocket/call1v1-controller";
 
 class WebSocketServer {
   private readonly io: Server;
@@ -16,6 +17,7 @@ class WebSocketServer {
   private readonly chat1v1Controller: Chat1v1Controller;
   private readonly roomController: ServerController;
   private readonly chatChannelController: ChatChannelController;
+  private readonly call1v1Controller: Call1v1Controller;
 
   constructor(httpServer: HTTPServer, notiRepo: NotificationRepository, chat1v1Repo: Chat1v1Repository, userRepo: UserRepository, chatChanelRepo: ChatChannelRepository) {
     this.io = new Server(httpServer, {
@@ -30,6 +32,7 @@ class WebSocketServer {
     this.roomController = new ServerController(this.io, db);
     this.chat1v1Controller = new Chat1v1Controller(this.io, db, chat1v1Repo, notiRepo, userRepo);
     this.chatChannelController = new ChatChannelController(this.io, chatChanelRepo, notiRepo);
+    this.call1v1Controller = new Call1v1Controller(this.io, db, notiRepo, userRepo);
   }
 
   public broadcast(event: string, data: any) {

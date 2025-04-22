@@ -13,6 +13,9 @@ import express from "express";
 import { Database } from "firebase-admin/database";
 import NotificationRepository from "../repositories/notificationRepository";
 import UserRepository from "../repositories/UserRepository";
+import JWT from "../helpers/JWT";
+import { CookieKeys } from "../constants";
+import Cookie from "../helpers/Cookie";
 
 interface User {
   id: number;
@@ -65,6 +68,7 @@ export default class FriendShipController extends BaseController {
     this.router.delete("/cancel-friend", this.cancelFriendRequest);
     this.router.delete("/unfriend", this.unFriendRequest);
     this.router.delete("/unblock", this.unblock);
+    this.router.get("/get-call-token", this.getCallToken);
   }
 
   makeFriend = async (
@@ -108,36 +112,36 @@ export default class FriendShipController extends BaseController {
     response: express.Response,
     next: express.NextFunction,
   ) => {
-      const { userId } = request.user as { userId: number };
-      const onlineUsersSnapshot = await this.db
-        .ref("usersOnline")
-        .once("value");
-      const onlineUsers = onlineUsersSnapshot.val() || {};
-      const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
+    const { userId } = request.user as { userId: number };
+    const onlineUsersSnapshot = await this.db
+      .ref("usersOnline")
+      .once("value");
+    const onlineUsers = onlineUsersSnapshot.val() || {};
+    const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
 
-      const includeFields = {
-        sender: { select: { id: true, loginName: true, avatarUrl: true } },
-        receiver: { select: { id: true, loginName: true, avatarUrl: true } },
+    const includeFields = {
+      sender: { select: { id: true, loginName: true, avatarUrl: true } },
+      receiver: { select: { id: true, loginName: true, avatarUrl: true } },
+    };
+
+    let onlineFriends: any = await this.friendShipRepo.getOnlineFriends(
+      userId,
+      onlineUserIds,
+      includeFields
+    );
+
+    onlineFriends = onlineFriends.map((friendship: any) => {
+      const user = friendship.senderId === userId ? friendship.receiver : friendship.sender;
+      return {
+        id: user.id,
+        loginName: user.loginName,
+        avatarUrl: user.avatarUrl,
       };
+    });
 
-      let onlineFriends: any = await this.friendShipRepo.getOnlineFriends(
-        userId,
-        onlineUserIds,
-        includeFields
-      );
-
-      onlineFriends = onlineFriends.map((friendship: any) => {
-        const user = friendship.senderId === userId ? friendship.receiver : friendship.sender;
-        return {
-          id: user.id,
-          loginName: user.loginName,
-          avatarUrl: user.avatarUrl,
-        };
-      });
-      
-      response.json({
-        data: onlineFriends,
-      });
+    response.json({
+      data: onlineFriends,
+    });
   };
 
   friendsList = async (
@@ -148,7 +152,7 @@ export default class FriendShipController extends BaseController {
     const { userId } = request.user;
     const { page = 1, limit = 10, search } = request.query;
     const filterCondition = search
-    ? {
+      ? {
         OR: [
           {
             senderId: Number(userId),
@@ -170,7 +174,7 @@ export default class FriendShipController extends BaseController {
           }
         ]
       }
-    : { OR: [{ senderId: Number(userId) }, { receiverId: Number(userId) }] };
+      : { OR: [{ senderId: Number(userId) }, { receiverId: Number(userId) }] };
 
     const includeFields = {
       sender: { select: { id: true, loginName: true, avatarUrl: true } },
@@ -187,15 +191,15 @@ export default class FriendShipController extends BaseController {
 
     const result = await Promise.all([allFriends, totalFriends]);
     const formattedData = result[0].map((friendship: any) => {
-        const user = friendship.senderId === userId ? friendship.receiver : friendship.sender;
-        return {
-          id: user.id,
-          loginName: user.loginName,
-          avatarUrl: user.avatarUrl,
-        };
-      }
+      const user = friendship.senderId === userId ? friendship.receiver : friendship.sender;
+      return {
+        id: user.id,
+        loginName: user.loginName,
+        avatarUrl: user.avatarUrl,
+      };
+    }
     );
-    
+
     response.json({
       data: formattedData,
       pagination: {
@@ -219,16 +223,16 @@ export default class FriendShipController extends BaseController {
     try {
       const filterCondition = search
         ? {
-            OR: [
-              {
-                receiverId: Number(userId),
-                status: "pending",
-                sender: {
-                  loginName: { contains: search, mode: "insensitive" },
-                },
+          OR: [
+            {
+              receiverId: Number(userId),
+              status: "pending",
+              sender: {
+                loginName: { contains: search, mode: "insensitive" },
               },
-            ],
-          }
+            },
+          ],
+        }
         : { OR: [{ receiverId: Number(userId), status: "pending" }] };
 
       const includeFields = {
@@ -269,16 +273,16 @@ export default class FriendShipController extends BaseController {
     try {
       const filterCondition = search
         ? {
-            OR: [
-              {
-                receiverId: Number(userId),
-                status: "blocked",
-                sender: {
-                  loginName: { contains: search, mode: "insensitive" },
-                },
+          OR: [
+            {
+              receiverId: Number(userId),
+              status: "blocked",
+              sender: {
+                loginName: { contains: search, mode: "insensitive" },
               },
-            ],
-          }
+            },
+          ],
+        }
         : { OR: [{ receiverId: Number(userId), status: "blocked" }] };
 
       const includeFields = {
@@ -368,10 +372,10 @@ export default class FriendShipController extends BaseController {
       }))
         ? null
         : await this.friendShipRepo.friendRequest({
-            senderId: userId,
-            receiverId: senderId,
-            status: "pending",
-          });
+          senderId: userId,
+          receiverId: senderId,
+          status: "pending",
+        });
 
       if (!friendship) {
         return next(new HttpException(404, "Friendship not found"));
@@ -532,7 +536,7 @@ export default class FriendShipController extends BaseController {
     });
   };
 
-  searchFriend =  async (
+  searchFriend = async (
     request: express.Request,
     response: express.Response,
     next: express.NextFunction,
@@ -560,5 +564,32 @@ export default class FriendShipController extends BaseController {
         hasPrevPage,
       },
     });
+  }
+  getCallToken = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    const { userId } = request.user;
+    const { receiverId, isCaller } = request.query;
+
+    if (receiverId === userId) {
+      return next(new HttpException(404, "Cannot send request to yourself"));
+    }
+    const user = await this.userRepo.getUserById(Number(userId))
+    const token = JWT.generateToken({
+      iss: "jitsi-vtc",
+      aud: "jitsi",
+      sub: "jitsi-vtc.duckdns.org",
+      room: "call-" + (isCaller ? userId + "-" + receiverId : receiverId + "-" + userId),
+      context: {
+        user: {
+          name: user.loginName,
+          id: userId,
+          avatar: user.avatarUrl || "https://robohash.org/" + user.loginName,
+        }
+      }
+    }, "SERVER_ACCESS");
+    response.json({ token });
   }
 }

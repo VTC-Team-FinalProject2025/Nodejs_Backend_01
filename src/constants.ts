@@ -22,6 +22,7 @@ export const CookieKeys = {
     USER_INFO: "user_info",
     CHANNEL_TOKEN: "channelToken",
     SERVER_TOKEN: "serverToken",
+    CALL_TOKEN: "callToken",
 }
 export const DEFAULT_SERVER_ICON = "https://robohash.org/adad";
 

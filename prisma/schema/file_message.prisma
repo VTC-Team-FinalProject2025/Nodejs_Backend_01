@@ -8,7 +8,6 @@ model File_message {
     id        Int            @id @default(autoincrement())
     userId    Int
     messageId Int
-    fileType  String
     field     String
     fieldType FileTypeStatus @default(image)
     createdAt DateTime       @default(now())

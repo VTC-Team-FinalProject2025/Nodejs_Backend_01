@@ -70,7 +70,7 @@ const JWT = {
                 });
             case "SERVER_ACCESS":
                 return JWT.signToken(payload, JWT_SERVER_ACCESS, {
-                    expiresIn: 60,
+                    expiresIn: 60 * 24,
                 });
             default:
                 return JWT.signToken(payload, JWT_SECRET);
