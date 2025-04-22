@@ -87,7 +87,6 @@ export class Chat1v1Controller {
           } = messageData;
           if (!senderId || !receiverId) return;
           if (!message && previewFiles?.length === 0) return;
-
           const encrypted = encrypt(message);
 
           const savedMessage = await this.chat1v1Repo.saveMessage(
@@ -130,34 +129,34 @@ export class Chat1v1Controller {
             FileMessages:
               ArrayFile.length > 0
                 ? ArrayFile.map((file) => ({
-                    userId: file.userId,
-                    field: file.field,
-                    fieldType: file.fieldType,
-                    messageId: file.messageId,
-                  }))
+                  userId: file.userId,
+                  field: file.field,
+                  fieldType: file.fieldType,
+                  messageId: file.messageId,
+                }))
                 : null,
             RepliesReceived:
               fullSavedMessage.RepliesReceived.length > 0
                 ? {
-                    replyMessageId:
-                      fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                  replyMessageId:
+                    fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                    null,
+                  ReplyMessage: {
+                    id:
+                      fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
                       null,
-                    ReplyMessage: {
-                      id:
-                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
-                        null,
-                      content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
-                        ?.content
-                        ? decrypt(
-                            fullSavedMessage.RepliesReceived[0].ReplyMessage
-                              .content,
-                          )
-                        : null,
-                      senderId:
-                        fullSavedMessage.RepliesReceived[0]?.ReplyMessage
-                          ?.senderId ?? null,
-                    },
-                  }
+                    content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                      ?.content
+                      ? decrypt(
+                        fullSavedMessage.RepliesReceived[0].ReplyMessage
+                          .content,
+                      )
+                      : null,
+                    senderId:
+                      fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                        ?.senderId ?? null,
+                  },
+                }
                 : null,
           };
 

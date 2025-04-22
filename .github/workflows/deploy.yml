@@ -40,4 +40,6 @@ jobs:
           docker pull ${{ secrets.DOCKER_USERNAME }}/vtc-backend-service:latest
           docker stop vtc-backend-server || true
           docker rm vtc-backend-server || true
-          docker run -d -p 3000:3000 --name vtc-backend-server ${{ secrets.DOCKER_USERNAME }}/vtc-backend-service:latest
+          docker run -d -p 3000:3000 --name vtc-backend-server \
+          --env-file ./backend/.env \
+          ${{ secrets.DOCKER_USERNAME }}/vtc-backend-service:latest

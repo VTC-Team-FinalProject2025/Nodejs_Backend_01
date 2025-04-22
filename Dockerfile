@@ -13,7 +13,7 @@ RUN apt-get update && apt-get install -y \
     libvips-dev \
     && rm -rf /var/lib/apt/lists/*
 # Sao chép package.json và cài đặt dependencies
-COPY package.json package-lock.json ./
+COPY package.json ./
 
 RUN npm install --force @img/sharp-linux-x64
 
@@ -28,6 +28,7 @@ RUN npm rebuild bcrypt --build-from-source
 
 # # Cài đặt lại sharp đúng nền tảng
 # RUN npm rebuild sharp --force
+RUN npx prisma generate
 
 # Biên dịch TypeScript
 RUN npm run build
