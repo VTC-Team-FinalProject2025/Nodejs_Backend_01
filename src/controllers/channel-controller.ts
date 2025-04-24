@@ -10,6 +10,8 @@ import UserRepository from "../repositories/UserRepository";
 import JWT from "../helpers/JWT";
 import CookieHelper from "../helpers/Cookie";
 import { CookieKeys } from "../constants";
+import bcrypt from 'bcrypt'; // import thư viện hash
+
 
 export default class ChannelController extends BaseController {
   private channelRepo: ChannelRepository;
@@ -32,6 +34,8 @@ export default class ChannelController extends BaseController {
     this.router.get(`/`, this.getChannels);
     this.router.put(`/:id`, ValidateSchema(ChannelUpdateSchema), this.updateChannel);
     this.router.delete(`/:id`, this.deleteChannel);
+    this.router.post('/verify-password', this.verifyChannelPassword);
+
   }
 
   private createChannel = async (req: Request, res: Response, next: NextFunction) => {
@@ -41,10 +45,25 @@ export default class ChannelController extends BaseController {
       if (!server) {
         return next(new HttpException(404, "Server not found"));
       }
-      const channel = await this.channelRepo.createChannel({ name, serverId, type, password });
+
+      // Hash password nếu tồn tại
+      let hashedPassword = null;
+      if (password) {
+        const saltRounds = 10;
+        hashedPassword = await bcrypt.hash(password, saltRounds);
+      }
+
+      const channel = await this.channelRepo.createChannel({
+        name,
+        serverId,
+        type,
+        password: hashedPassword,
+      });
+
       if (!channel) {
         return next(new HttpException(400, "Failed to create channel"));
       }
+
       res.status(201).json(channel);
     } catch (error) {
       next(new HttpException(500, "Internal server error"));
@@ -101,12 +120,22 @@ export default class ChannelController extends BaseController {
   private updateChannel = async (req: Request, res: Response, next: NextFunction) => {
     const { id } = req.params;
     const { name, password } = req.body;
+
     try {
       const channel = await this.channelRepo.getChannelById(Number(id));
       if (!channel) {
         return next(new HttpException(404, "Channel not found"));
       }
-      const updatedChannel = await this.channelRepo.updateChannel({ id: Number(id), name, password });
+
+      // Hash password nếu có
+      let hashedPassword = password ? await bcrypt.hash(password, 10) : undefined;
+
+      const updatedChannel = await this.channelRepo.updateChannel({
+        id: Number(id),
+        name,
+        password: hashedPassword,
+      });
+
       res.status(200).json(updatedChannel);
     } catch (error) {
       next(new HttpException(500, "Failed to update channel"));
@@ -124,6 +153,30 @@ export default class ChannelController extends BaseController {
       res.status(200).json({ message: "Channel deleted successfully" });
     } catch (error) {
       next(new HttpException(500, "Failed to delete channel"));
+    }
+  };
+
+  private verifyChannelPassword = async (req: Request, res: Response, next: NextFunction) => {
+    const { channelId, password } = req.body;
+  
+    try {
+      const channel = await this.channelRepo.getChannelById(Number(channelId));
+      if (!channel) {
+        return next(new HttpException(404, "Channel not found"));
+      }
+  
+      if (!channel.password) {
+        return next(new HttpException(400, "This channel does not require a password"));
+      }
+  
+      const isMatch = await bcrypt.compare(password, channel.password);
+      if (!isMatch) {
+        return next(new HttpException(401, "Incorrect password"));
+      }
+  
+      res.status(200).json({ message: "Password verified successfully" });
+    } catch (error) {
+      next(new HttpException(500, "Internal server error"));
     }
   };
 }
