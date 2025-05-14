@@ -329,4 +329,61 @@ export default class Chat1v1Repository {
       data: {userId, messageId, fieldType, field}
     })
   }
+
+  async getChatImages(userId: number, chatPartnerId: number, field_type = 'image', page: number = 1, pageSize: number = 20) {
+    const skip = (page - 1) * pageSize;
+    
+    const images = await this.prisma.file_direct_message.findMany({
+      where: {
+        fieldType: field_type as FileTypeDirectStatus,
+        Message: {
+          OR: [
+            { senderId: userId, receiverId: chatPartnerId },
+            { senderId: chatPartnerId, receiverId: userId }
+          ]
+        }
+      },
+      orderBy: {
+        createdAt: 'desc'
+      },
+      skip,
+      take: pageSize,
+      include: {
+        Message: {
+          select: {
+            id: true,
+            createdAt: true,
+            Sender: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                avatarUrl: true
+              }
+            }
+          }
+        }
+      }
+    });
+
+    return {
+      images: images.map(img => ({
+        ...img,
+        Message: {
+          ...img.Message,
+        }
+      })),
+      total: await this.prisma.file_direct_message.count({
+        where: {
+          fieldType: field_type as FileTypeDirectStatus,
+          Message: {
+            OR: [
+              { senderId: userId, receiverId: chatPartnerId },
+              { senderId: chatPartnerId, receiverId: userId }
+            ]
+          }
+        }
+      })
+    };
+  }
 }
