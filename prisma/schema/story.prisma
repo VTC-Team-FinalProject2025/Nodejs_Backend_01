@@ -1,0 +1,12 @@
+model Story {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  content   String   @db.Text
+  mediaUrl  String?  @db.VarChar(255)
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user Users @relation(fields: [userId], references: [id])
+
+  @@map("stories")
+}

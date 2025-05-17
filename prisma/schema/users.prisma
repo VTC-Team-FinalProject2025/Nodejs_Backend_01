@@ -42,5 +42,7 @@ model Users {
   FileMessagesDirect File_direct_message[]
   FileMessages File_message[]
 
+  stories Story[]
+
   @@map("users")
 }
