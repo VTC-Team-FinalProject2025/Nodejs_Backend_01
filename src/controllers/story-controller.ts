@@ -63,7 +63,7 @@ export default class StoryController extends BaseController {
 
     try {
       const view = await this.storyRepo.markStoryAsViewed(storyId, userId);
-      res.status(200).json(view);
+      res.status(200).json({ message: `read story with storyId ${storyId}`});
     } catch (error) {
       next(new HttpException(500, "Failed to mark story as viewed"));
     }
