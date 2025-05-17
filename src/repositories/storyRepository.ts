@@ -10,7 +10,6 @@ export default class StoryRepository {
   // ✅ Tạo story (có thể là PRIVATE, PUBLIC, CUSTOM)
   async createStoryWithCustomVisibility(data: {
     userId: number;
-    content: string;
     mediaUrl?: string;
     visibility: StoryVisibility;
     allowedUserIds?: number[];
