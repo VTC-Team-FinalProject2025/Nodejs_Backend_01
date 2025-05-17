@@ -22,6 +22,8 @@ import ChatMessageController from "./controllers/messagechanel-controller";
 import { Server } from "http";
 import RoleRepository from "./repositories/roleRepository";
 import RoleController from "./controllers/role-controller";
+import StoryController from './controllers/story-controller';
+import StoryRepository from './repositories/storyRepository';
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -34,6 +36,8 @@ const notiRepo = new NotificationRepository(prismaClient);
 const chat1v1Repo = new Chat1v1Repository(prismaClient);
 const roleRepo = new RoleRepository(prismaClient);
 const chatChanelRepo = new ChatChannelRepository(prismaClient);
+const storyRepo = new StoryRepository(prismaClient);
+
 const app = new App(
   [
     new AuthController(userRepo, Passport),
@@ -51,7 +55,8 @@ const app = new App(
     new UserController(userRepo),
     new Chat1v1Controller(chat1v1Repo),
     new RoleController(roleRepo),
-    new ChatMessageController(chatChanelRepo)
+    new ChatMessageController(chatChanelRepo),
+    new StoryController(storyRepo)
   ],
   port,
   notiRepo,
