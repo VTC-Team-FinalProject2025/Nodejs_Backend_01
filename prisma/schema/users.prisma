@@ -43,6 +43,7 @@ model Users {
   FileMessages File_message[]
 
   stories Story[]
+  allowedStories StoryAllowed[]
 
   @@map("users")
 }
