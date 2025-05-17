@@ -1,19 +1,21 @@
 enum StoryVisibility {
-  PUBLIC    
-  PRIVATE   
-  CUSTOM 
+  PUBLIC
+  PRIVATE
+  CUSTOM
 }
+
 model Story {
-  id         Int              @id @default(autoincrement())
+  id         Int             @id @default(autoincrement())
   userId     Int
-  mediaUrl   String         @db.VarChar(255)
-  visibility StoryVisibility  @default(PUBLIC)
-  createdAt  DateTime         @default(now())
+  mediaUrl   String          @db.VarChar(255)
+  image      String?         @db.VarChar(255)
+  visibility StoryVisibility @default(PUBLIC)
+  createdAt  DateTime        @default(now())
   expiresAt  DateTime
 
-  user       Users            @relation(fields: [userId], references: [id])
-  allowedUsers StoryAllowed[] 
-  viewers      StoryView[] 
+  user         Users          @relation(fields: [userId], references: [id])
+  allowedUsers StoryAllowed[]
+  viewers      StoryView[]
 
   @@map("stories")
 }

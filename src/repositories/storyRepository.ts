@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, StoryVisibility } from "@prisma/client";
 
 export default class StoryRepository {
   private prisma: PrismaClient;
@@ -12,8 +12,9 @@ export default class StoryRepository {
     userId: number;
     content: string;
     mediaUrl?: string;
-    visibility: "PUBLIC" | "PRIVATE" | "CUSTOM";
+    visibility: StoryVisibility;
     allowedUserIds?: number[];
+    image: string;
   }) {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 24);
@@ -23,6 +24,7 @@ export default class StoryRepository {
         userId: data.userId,
         mediaUrl: data.mediaUrl,
         visibility: data.visibility,
+        image: data.image,
         expiresAt,
         allowedUsers:
           data.visibility === "CUSTOM"
@@ -148,6 +150,7 @@ export default class StoryRepository {
             firstName: true,
             lastName: true,
             avatarUrl: true,
+            loginName: true
           },
         },
         viewers: {

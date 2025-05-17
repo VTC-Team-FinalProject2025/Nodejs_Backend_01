@@ -26,7 +26,7 @@ export default class StoryController extends BaseController {
 
   // POST /stories – tạo story
   private createStory = async (req: Request, res: Response, next: NextFunction) => {
-    const { content, mediaUrl, visibility, allowedUserIds } = req.body;
+    const { content, mediaUrl, visibility, allowedUserIds, image } = req.body;
     const userId = req.user.id;
 
     try {
@@ -36,6 +36,7 @@ export default class StoryController extends BaseController {
         mediaUrl,
         visibility,
         allowedUserIds,
+        image
       });
       res.status(201).json(story);
     } catch (error) {
