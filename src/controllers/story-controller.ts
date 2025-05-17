@@ -37,7 +37,7 @@ export default class StoryController extends BaseController {
         allowedUserIds,
         image
       });
-      res.status(201).json(story);
+      res.status(201).json({ message: "Successfully posted story"});
     } catch (error) {
       next(new HttpException(500, "Failed to create story"));
     }
