@@ -46,10 +46,9 @@ export default class StoryController extends BaseController {
   // GET /stories – lấy danh sách story bạn bè và mình
   private getStories = async (req: Request, res: Response, next: NextFunction) => {
     const userId = req.user.userId;
-    const { page = 1, pageSize = 10 } = req.query;
 
     try {
-      const stories = await this.storyRepo.listStories(userId, Number(page), Number(pageSize));
+      const stories = await this.storyRepo.listStories(userId);
       res.status(200).json(stories);
     } catch (error) {
       next(new HttpException(500, "Failed to get stories"));

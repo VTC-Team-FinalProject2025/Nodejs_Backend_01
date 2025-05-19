@@ -91,17 +91,14 @@ export default class StoryRepository {
   }
 
   // ✅ Lấy danh sách story (bao gồm cả mình và bạn bè)
-  async listStories(userId: number, page = 1, pageSize = 10) {
-    const skip = (page - 1) * pageSize;
+  async listStories(userId: number) {
     const now = new Date();
-
-    return this.prisma.story.findMany({
+  
+    const stories = await this.prisma.story.findMany({
       where: {
         expiresAt: { gt: now },
         OR: [
-          { userId }, // story chính mình
-
-          // story PUBLIC từ bạn bè
+          { userId },
           {
             visibility: "PUBLIC",
             user: {
@@ -125,8 +122,6 @@ export default class StoryRepository {
               ],
             },
           },
-
-          // story CUSTOM được phép xem
           {
             visibility: "CUSTOM",
             allowedUsers: {
@@ -138,10 +133,8 @@ export default class StoryRepository {
         ],
       },
       orderBy: {
-        createdAt: "desc",
+        createdAt: "asc",
       },
-      skip,
-      take: pageSize,
       include: {
         user: {
           select: {
@@ -149,7 +142,7 @@ export default class StoryRepository {
             firstName: true,
             lastName: true,
             avatarUrl: true,
-            loginName: true
+            loginName: true,
           },
         },
         viewers: {
@@ -158,5 +151,29 @@ export default class StoryRepository {
         },
       },
     });
+  
+    const grouped = new Map<number, any>();
+  
+    for (const story of stories) {
+      const { user, ...storyData } = story;
+      if (!grouped.has(user.id)) {
+        grouped.set(user.id, {
+          user,
+          stories: [],
+        });
+      }
+      grouped.get(user.id).stories.push(storyData);
+    }
+  
+    const groupedArray = Array.from(grouped.values());
+  
+    // 👉 Sắp xếp sao cho group của chính mình (userId) luôn đứng đầu
+    groupedArray.sort((a, b) => {
+      if (a.user.id === userId) return -1;
+      if (b.user.id === userId) return 1;
+      return 0;
+    });
+  
+    return groupedArray;
   }
 }
