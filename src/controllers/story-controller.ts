@@ -27,7 +27,7 @@ export default class StoryController extends BaseController {
   // POST /stories – tạo story
   private createStory = async (req: Request, res: Response, next: NextFunction) => {
     const { mediaUrl, visibility, allowedUserIds, image } = req.body;
-    const userId = req.user.id;
+    const userId = req.user.userId;
 
     try {
       const story = await this.storyRepo.createStoryWithCustomVisibility({
