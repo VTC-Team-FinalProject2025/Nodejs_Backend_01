@@ -81,6 +81,7 @@ export default class StoryRepository {
             firstName: true,
             lastName: true,
             avatarUrl: true,
+            loginName: true
           },
         },
       },
