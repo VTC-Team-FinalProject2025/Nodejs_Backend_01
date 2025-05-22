@@ -16,6 +16,7 @@ model Story {
   user         Users          @relation(fields: [userId], references: [id])
   allowedUsers StoryAllowed[]
   viewers      StoryView[]
+  storyReactions StoryReaction[]
 
   @@map("stories")
 }

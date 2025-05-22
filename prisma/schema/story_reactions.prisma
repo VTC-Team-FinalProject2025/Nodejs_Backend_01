@@ -1,0 +1,22 @@
+enum ReactionType {
+  LIKE
+  LOVE
+  HAHA
+  WOW
+  SAD
+  ANGRY
+}
+
+model StoryReaction {
+  id        Int          @id @default(autoincrement())
+  storyId   Int
+  userId    Int
+  type      ReactionType
+  reactedAt DateTime     @default(now())
+
+  story     Story        @relation(fields: [storyId], references: [id])
+  user      Users        @relation(fields: [userId], references: [id])
+
+  // Không cần unique constraint nào ở đây
+  @@map("story_reactions")
+}
