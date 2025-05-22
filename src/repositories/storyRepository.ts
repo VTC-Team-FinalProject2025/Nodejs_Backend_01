@@ -1,4 +1,4 @@
-import { PrismaClient, StoryVisibility } from "@prisma/client";
+import { PrismaClient, ReactionType, StoryVisibility } from "@prisma/client";
 
 export default class StoryRepository {
   private prisma: PrismaClient;
@@ -81,7 +81,14 @@ export default class StoryRepository {
             firstName: true,
             lastName: true,
             avatarUrl: true,
-            loginName: true
+            loginName: true,
+            storyReactions: {
+              where: { storyId },
+              select: {
+                type: true,
+                reactedAt: true,
+              },
+            },
           },
         },
       },
@@ -94,7 +101,7 @@ export default class StoryRepository {
   // ✅ Lấy danh sách story (bao gồm cả mình và bạn bè)
   async listStories(userId: number) {
     const now = new Date();
-  
+
     const stories = await this.prisma.story.findMany({
       where: {
         expiresAt: { gt: now },
@@ -152,9 +159,9 @@ export default class StoryRepository {
         },
       },
     });
-  
+
     const grouped = new Map<number, any>();
-  
+
     for (const story of stories) {
       const { user, ...storyData } = story;
       if (!grouped.has(user.id)) {
@@ -165,16 +172,26 @@ export default class StoryRepository {
       }
       grouped.get(user.id).stories.push(storyData);
     }
-  
+
     const groupedArray = Array.from(grouped.values());
-  
+
     // 👉 Sắp xếp sao cho group của chính mình (userId) luôn đứng đầu
     groupedArray.sort((a, b) => {
       if (a.user.id === userId) return -1;
       if (b.user.id === userId) return 1;
       return 0;
     });
-  
+
     return groupedArray;
+  }
+
+  async createReaction(storyId: number, userId: number, type: ReactionType) {
+    return this.prisma.storyReaction.create({
+      data: {
+        storyId,
+        userId,
+        type,
+      },
+    });
   }
 }
