@@ -21,7 +21,7 @@ export default class StoryController extends BaseController {
     this.router.post(`/:id/view`, this.markAsViewed);
     this.router.get(`/:id/views`, this.getStoryViews);
     this.router.delete(`/:id`, this.deleteStory);
-    this.router.post("/stories/:id/reactions", this.createReaction);
+    this.router.post("/:id/reactions", this.createReaction);
   }
 
   // POST /stories – tạo story
@@ -132,7 +132,7 @@ export default class StoryController extends BaseController {
         userId,
         type,
       );
-      res.status(201).json(reaction);
+      res.status(201).json({ message: "Successfully create reaction" });
     } catch (error) {
       console.error(error);
       next(new HttpException(500, "Failed to create reaction"));
