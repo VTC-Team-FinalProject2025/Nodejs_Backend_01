@@ -13,7 +13,7 @@ model Story {
   createdAt  DateTime        @default(now())
   expiresAt  DateTime
 
-  user         Users          @relation(fields: [userId], references: [id])
+  user         Users          @relation(fields: [userId], references: [id], onDelete: Cascade)
   allowedUsers StoryAllowed[]
   viewers      StoryView[]
   storyReactions StoryReaction[]

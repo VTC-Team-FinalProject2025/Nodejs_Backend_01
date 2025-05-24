@@ -4,8 +4,8 @@ model Icon_direct_message {
   messageId Int
   icon      String?
 
-  User    Users          @relation(fields: [userId], references: [id])
-  Message Direct_message @relation(fields: [messageId], references: [id])
+  User    Users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Message Direct_message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
   @@unique([userId, messageId])
 }

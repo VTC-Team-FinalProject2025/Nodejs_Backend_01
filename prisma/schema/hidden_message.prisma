@@ -3,8 +3,8 @@ model Hidden_message_channel {
     userId    Int
     messageId Int
 
-    User           Users   @relation(fields: [userId], references: [id])
-    MessageChannel Message @relation(fields: [messageId], references: [id])
+    User           Users   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    MessageChannel Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
     @@unique([userId, messageId])
 }

@@ -7,8 +7,8 @@ model Direct_message {
   createdAt  DateTime  @default(now())
   editedAt   DateTime?
 
-  Sender   Users @relation("MessageSender", fields: [senderId], references: [id])
-  Receiver Users @relation("MessageReceiver", fields: [receiverId], references: [id])
+  Sender   Users @relation("MessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+  Receiver Users @relation("MessageReceiver", fields: [receiverId], references: [id], onDelete: Cascade)
 
   RepliesSent     Reply_direct_message[] @relation("ReplySender")
   RepliesReceived Reply_direct_message[] @relation("ReplyReceiver")

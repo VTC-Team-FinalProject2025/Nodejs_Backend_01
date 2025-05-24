@@ -12,8 +12,8 @@ model File_message {
     fieldType FileTypeStatus @default(image)
     createdAt DateTime       @default(now())
 
-    User    Users          @relation(fields: [userId], references: [id])
-    Message Message @relation(fields: [messageId], references: [id])
+    User    Users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    Message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
     @@map("File_message")
 }

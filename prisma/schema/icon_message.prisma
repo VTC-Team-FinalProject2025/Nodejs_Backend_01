@@ -4,8 +4,8 @@ model Icon_message_channel {
     messageId Int
     icon      String?
 
-    User    Users   @relation(fields: [userId], references: [id])
-    Message Message @relation(fields: [messageId], references: [id])
+    User    Users   @relation(fields: [userId], references: [id],onDelete: Cascade)
+    Message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
     @@unique([userId, messageId])
 }

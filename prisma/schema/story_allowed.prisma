@@ -3,8 +3,8 @@ model StoryAllowed {
   storyId  Int
   userId   Int
 
-  story    Story  @relation(fields: [storyId], references: [id])
-  user     Users  @relation(fields: [userId], references: [id])
+  story    Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user     Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([storyId, userId])
 }
