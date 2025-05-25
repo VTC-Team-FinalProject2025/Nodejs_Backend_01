@@ -136,6 +136,7 @@ export default class FriendShipController extends BaseController {
         id: user.id,
         loginName: user.loginName,
         avatarUrl: user.avatarUrl,
+        online: true
       };
     });
 
@@ -144,73 +145,87 @@ export default class FriendShipController extends BaseController {
     });
   };
 
-  friendsList = async (
-    request: express.Request,
-    response: express.Response,
-    next: express.NextFunction,
-  ) => {
-    const { userId } = request.user;
-    const { page = 1, limit = 10, search } = request.query;
-    const filterCondition = search
-      ? {
+friendsList = async (
+  request: express.Request,
+  response: express.Response,
+  next: express.NextFunction,
+) => {
+  const { userId } = request.user;
+  const { page = 1, limit = 10, search } = request.query;
+
+  const onlineUsersSnapshot = await this.db.ref("usersOnline").once("value");
+  const onlineUsers = onlineUsersSnapshot.val() || {};
+  const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
+
+  const filterCondition = search
+    ? {
         OR: [
           {
             senderId: Number(userId),
             status: "accepted",
             receiver: {
               is: {
-                loginName: { contains: search }
-              }
-            }
+                loginName: { contains: search },
+              },
+            },
           },
           {
             receiverId: Number(userId),
             status: "accepted",
             sender: {
               is: {
-                loginName: { contains: search }
-              }
-            }
-          }
-        ]
+                loginName: { contains: search },
+              },
+            },
+          },
+        ],
       }
-      : { OR: [{ senderId: Number(userId) }, { receiverId: Number(userId) }] };
+    : {
+        OR: [
+          { senderId: Number(userId), status: "accepted" },
+          { receiverId: Number(userId), status: "accepted" },
+        ],
+      };
 
-    const includeFields = {
-      sender: { select: { id: true, loginName: true, avatarUrl: true } },
-      receiver: { select: { id: true, loginName: true, avatarUrl: true } },
-    };
+  const includeFields = {
+    sender: { select: { id: true, loginName: true, avatarUrl: true } },
+    receiver: { select: { id: true, loginName: true, avatarUrl: true } },
+  };
 
-    let allFriends = this.friendShipRepo.getAllFriends(
+  const [allFriends, totalFriends] = await Promise.all([
+    this.friendShipRepo.getAllFriends(
       filterCondition,
       includeFields,
       Number(limit),
       Number(page)
-    );
-    let totalFriends = this.friendShipRepo.countFriends(filterCondition);
+    ),
+    this.friendShipRepo.countFriends(filterCondition),
+  ]);
 
-    const result = await Promise.all([allFriends, totalFriends]);
-    const formattedData = result[0].map((friendship: any) => {
-      const user = friendship.senderId === userId ? friendship.receiver : friendship.sender;
-      return {
-        id: user.id,
-        loginName: user.loginName,
-        avatarUrl: user.avatarUrl,
-      };
-    }
-    );
+  const formattedData = allFriends.map((friendship: any) => {
+    const user = friendship.senderId === userId ? friendship.receiver : friendship.sender;
+    const isOnline = onlineUserIds.has(user.id);
+    return {
+      id: user.id,
+      loginName: user.loginName,
+      avatarUrl: user.avatarUrl,
+      online: isOnline,
+    };
+  });
 
-    response.json({
-      data: formattedData,
-      pagination: {
-        total: result[1],
-        page: Number(page),
-        limit: Number(limit),
-        hasNextPage: Number(page) * Number(limit) < result[1],
-        hasPrevPage: Number(page) > 1,
-      },
-    });
-  };
+  formattedData.sort((a, b) => Number(b.online) - Number(a.online));
+
+  response.json({
+    data: formattedData,
+    pagination: {
+      total: totalFriends,
+      page: Number(page),
+      limit: Number(limit),
+      hasNextPage: Number(page) * Number(limit) < totalFriends,
+      hasPrevPage: Number(page) > 1,
+    },
+  });
+};
 
   friendRequestList = async (
     request: express.Request,
