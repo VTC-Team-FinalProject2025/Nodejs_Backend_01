@@ -15,28 +15,34 @@ export function encrypt(text: string | null | undefined): string | null {
     return Buffer.from(JSON.stringify(encryptedObject)).toString("base64");
   }
   
-  // 🛠 **Hàm giải mã: Nhận string từ API và giải mã**
-  export function decrypt(encryptedString: string | null | undefined): string | null {
-    if (!encryptedString) return null;
-    try {
-      // Giải mã Base64 → JSON
-      const decoded = JSON.parse(Buffer.from(encryptedString, "base64").toString("utf8"));
-  
-      // Giải mã dữ liệu
-      const decipher = crypto.createDecipheriv(
-        ALGORITHM,
-        key,
-        Buffer.from(decoded.iv, "hex")
-      );
-      let decrypted = decipher.update(decoded.encryptedData, "hex", "utf8");
-      decrypted += decipher.final("utf8");
-  
-      return decrypted;
-    } catch (error) {
-      console.error("Lỗi giải mã:", error);
-      return "";
+export function decrypt(encryptedString: string | null | undefined): string | null {
+  if (!encryptedString) return null;
+
+  try {
+    const decodedBase64 = Buffer.from(encryptedString, "base64").toString("utf8");
+
+    // Nếu không phải chuỗi JSON hợp lệ thì bỏ qua
+    if (!decodedBase64.startsWith("{") || !decodedBase64.includes("encryptedData") || !decodedBase64.includes("iv")) {
+      console.warn("⚠️ Bỏ qua chuỗi không hợp lệ:", encryptedString);
+      return null;
     }
+
+    const decoded = JSON.parse(decodedBase64);
+
+    const decipher = crypto.createDecipheriv(
+      ALGORITHM,
+      key,
+      Buffer.from(decoded.iv, "hex")
+    );
+    let decrypted = decipher.update(decoded.encryptedData, "hex", "utf8");
+    decrypted += decipher.final("utf8");
+
+    return decrypted;
+  } catch (error) {
+    console.error("❌ Lỗi giải mã:", error.message || error);
+    return null;
   }
+}
   
 //   // 🎯 **Thử nghiệm mã hóa & giải mã**
 //   const originalMessage = "Đây là tin nhắn bí mật!";
