@@ -17,6 +17,7 @@ export default class Message1v1Controller extends BaseController {
     this.router.use(authMiddleware);
     this.router.get("/list-recent-chats", this.ListRecentChats);
     this.router.get("/list-chats", this.ListChats);
+    this.router.get("/file", this.GetChatImages);
   }
 
   private readonly ListRecentChats = async (
@@ -56,6 +57,33 @@ export default class Message1v1Controller extends BaseController {
         pageSize
       );
       response.json(messages);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  private readonly GetChatImages = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    try {
+      const { userId } = request.user;
+      const { chatPartnerId, field_type = 'image', page = 1, limit = 20 } = request.query;
+      
+      if (!chatPartnerId) {
+        return response.status(400).json({ error: "chatPartnerId is required" });
+      }
+
+      const images = await this.chat1v1Repo.getChatImages(
+        Number(userId),
+        Number(chatPartnerId),
+        String(field_type),
+        Number(page),
+        Number(limit)
+      );
+      
+      response.json(images);
     } catch (error) {
       next(error);
     }

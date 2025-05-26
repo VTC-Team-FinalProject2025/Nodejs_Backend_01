@@ -1,0 +1,11 @@
+model StoryView {
+  id        Int      @id @default(autoincrement())
+  storyId   Int
+  userId    Int
+  viewedAt  DateTime @default(now())
+
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      Users    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, userId])
+}

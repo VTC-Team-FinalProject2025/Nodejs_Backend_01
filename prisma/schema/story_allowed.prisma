@@ -1,0 +1,10 @@
+model StoryAllowed {
+  id       Int    @id @default(autoincrement())
+  storyId  Int
+  userId   Int
+
+  story    Story  @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user     Users  @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([storyId, userId])
+}

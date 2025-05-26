@@ -42,5 +42,11 @@ model Users {
   FileMessagesDirect File_direct_message[]
   FileMessages File_message[]
 
+  stories Story[]
+  allowedStories StoryAllowed[]
+  storyViews     StoryView[] 
+
+  storyReactions  StoryReaction[] 
+
   @@map("users")
 }

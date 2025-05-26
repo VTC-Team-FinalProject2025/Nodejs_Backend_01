@@ -3,8 +3,8 @@ model Hidden_direct_message {
   userId    Int 
   messageId Int 
 
-  User    Users          @relation(fields: [userId], references: [id])
-  Message Direct_message @relation(fields: [messageId], references: [id])
+  User    Users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Message Direct_message @relation(fields: [messageId], references: [id],onDelete: Cascade)
 
   @@unique([userId, messageId])
 }
