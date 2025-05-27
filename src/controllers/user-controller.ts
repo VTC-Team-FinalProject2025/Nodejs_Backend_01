@@ -4,7 +4,7 @@ import authMiddleware from "../middlewares/authentication.middleware";
 import UserRepository from "../repositories/UserRepository";
 import HttpException from "../exceptions/http-exception";
 import bcrypt from "bcrypt";
-import { BYCRYPT_SALT } from "../constants";
+import { BYCRYPT_SALT, CookieKeys } from "../constants";
 import validateSchema from "../middlewares/validateSchema.middleware";
 import {
   UpdateLoginNameFormSchema,
