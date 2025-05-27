@@ -373,7 +373,7 @@ export default class AuthController extends BaseController {
   }
   setTokenIntoCookie = (token: string, refresh_token: string, response: express.Response, user: any) => {
     CookieHelper.setCookie(CookieKeys.ACCESS_TOKEN, token, response);
-    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response, { httpOnly: true, maxAge: 7 * 24 * 60 * 60 * 1000 });
+    CookieHelper.setCookie(CookieKeys.REFRESH, refresh_token, response, { httpOnly: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000 });
     CookieHelper.setCookie(
       CookieKeys.USER_INFO,
       JSON.stringify({ userId: user.id, avatarUrl: user.avatarUrl, loginName: user.loginName, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone }),

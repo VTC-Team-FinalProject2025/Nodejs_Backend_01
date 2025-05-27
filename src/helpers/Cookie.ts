@@ -9,6 +9,7 @@ const Cookie = {
             sameSite: 'none',
             path: "/",
             secure: process.env.NODE_ENV === "production",
+            domain: process.env.NODE_ENV === "production" ? process.env.URL_CLIENT.split("//")[1] : undefined,
             ...options
         });
     },
@@ -16,6 +17,7 @@ const Cookie = {
         response.clearCookie(key, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
+            domain: process.env.NODE_ENV === "production" ? process.env.URL_CLIENT.split("//")[1] : undefined,
             sameSite: "none",
         });
     },
