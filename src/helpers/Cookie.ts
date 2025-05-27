@@ -8,16 +8,16 @@ const Cookie = {
         response.cookie(key, value, {
             sameSite: 'none',
             path: "/",
+            domain: process.env.NODE_ENV === "production" ? "duckdns.org" : undefined,
             secure: process.env.NODE_ENV === "production",
-            domain: process.env.NODE_ENV === "production" ? process.env.URL_CLIENT.split("//")[1] : undefined,
             ...options
         });
     },
     clearCookie: (key: string, response: express.Response) => {
         response.clearCookie(key, {
             httpOnly: true,
+            domain: process.env.NODE_ENV === "production" ? "duckdns.org" : undefined,
             secure: process.env.NODE_ENV === "production",
-            domain: process.env.NODE_ENV === "production" ? process.env.URL_CLIENT.split("//")[1] : undefined,
             sameSite: "none",
         });
     },
