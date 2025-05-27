@@ -8,7 +8,8 @@ const Cookie = {
         response.cookie(key, value, {
             sameSite: 'none',
             path: "/",
-            domain: process.env.NODE_ENV === "production" ? "duckdns.org" : undefined,
+            httpOnly: true,
+            domain: undefined,
             secure: process.env.NODE_ENV === "production",
             ...options
         });
@@ -16,7 +17,7 @@ const Cookie = {
     clearCookie: (key: string, response: express.Response) => {
         response.clearCookie(key, {
             httpOnly: true,
-            domain: process.env.NODE_ENV === "production" ? "duckdns.org" : undefined,
+            domain: undefined,
             secure: process.env.NODE_ENV === "production",
             sameSite: "none",
         });
