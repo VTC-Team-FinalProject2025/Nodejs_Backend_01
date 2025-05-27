@@ -378,7 +378,7 @@ export default class AuthController extends BaseController {
       CookieKeys.USER_INFO,
       JSON.stringify({ userId: user.id, avatarUrl: user.avatarUrl, loginName: user.loginName, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone }),
       response,
-      { httpOnly: false, maxAge: 7 * 24 * 60 * 60 * 1000 }
+      { httpOnly: process.env.NODE_ENV === "production", maxAge: 7 * 24 * 60 * 60 * 1000 }
     );
   }
 }
