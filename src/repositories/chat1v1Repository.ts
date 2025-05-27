@@ -1,12 +1,15 @@
 import { PrismaClient } from "@prisma/client";
 import { decrypt } from "../helpers/Encryption";
 import {FileTypeDirectStatus} from "@prisma/client";
+import { Database } from "firebase-admin/database";
 
 export default class Chat1v1Repository {
   public prisma: PrismaClient;
+  private readonly db: Database;
 
-  constructor(prisma: PrismaClient) {
+  constructor(prisma: PrismaClient, db: Database) {
     this.prisma = prisma;
+    this.db = db;
   }
 
   async saveMessage(senderId: number, receiverId: number, content: string) {
@@ -117,118 +120,126 @@ export default class Chat1v1Repository {
     });
   }
 
-  async ListRecentChats(
-    userId: number,
-    page: number = 1,
-    pageSize: number = 20,
-  ) {
-    const skip = (page - 1) * pageSize;
+async ListRecentChats(
+  userId: number,
+  page: number = 1,
+  pageSize: number = 20,
+) {
+  const skip = (page - 1) * pageSize;
 
-    // Lấy danh sách các cuộc trò chuyện gần đây
-    const recentChats = await this.prisma.direct_message.findMany({
-      where: {
-        OR: [{ senderId: userId }, { receiverId: userId }],
-      },
-      orderBy: { createdAt: "desc" },
-      distinct: ["senderId", "receiverId"],
-      skip,
-      take: pageSize,
-      include: {
-        Sender: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            loginName: true,
-            avatarUrl: true,
-          },
-        },
-        Receiver: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            loginName: true,
-            avatarUrl: true,
-          },
+  // B1: Lấy danh sách online từ Firebase
+  const onlineUsersSnapshot = await this.db.ref("usersOnline").once("value");
+  const onlineUsers = onlineUsersSnapshot.val() || {};
+  const onlineUserIds = new Set(Object.keys(onlineUsers).map(Number));
+
+  // B2: Lấy danh sách các cuộc trò chuyện gần đây
+  const recentChats = await this.prisma.direct_message.findMany({
+    where: {
+      OR: [{ senderId: userId }, { receiverId: userId }],
+    },
+    orderBy: { createdAt: "desc" },
+    distinct: ["senderId", "receiverId"],
+    skip,
+    take: pageSize,
+    include: {
+      Sender: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          loginName: true,
+          avatarUrl: true,
         },
       },
-    });
+      Receiver: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          loginName: true,
+          avatarUrl: true,
+        },
+      },
+    },
+  });
 
-    const uniqueUsers = new Map<number, any>();
+  const uniqueUsers = new Map<number, any>();
 
-    for (const msg of recentChats) {
-      const chatPartner = msg.senderId === userId ? msg.Receiver : msg.Sender;
-      if (!chatPartner) continue;
+  for (const msg of recentChats) {
+    const chatPartner = msg.senderId === userId ? msg.Receiver : msg.Sender;
+    if (!chatPartner) continue;
 
-      if (!uniqueUsers.has(chatPartner.id)) {
-        uniqueUsers.set(chatPartner.id, {
-          ...chatPartner,
-          unreadCount: 0,
-          latestMessage: null,
-          latestMessageRead: true,
-          latestMessageSenderId: null,
-        });
+    const isOnline = onlineUserIds.has(chatPartner.id);
+
+    if (!uniqueUsers.has(chatPartner.id)) {
+      uniqueUsers.set(chatPartner.id, {
+        ...chatPartner,
+        online: isOnline,
+        unreadCount: 0,
+        latestMessage: null,
+        latestMessageRead: true,
+        latestMessageSenderId: null,
+      });
+    }
+  }
+
+  const unreadCounts = await this.prisma.direct_message.groupBy({
+    by: ["senderId"],
+    where: {
+      receiverId: userId,
+      isRead: false,
+    },
+    _count: {
+      _all: true,
+    },
+  });
+
+  unreadCounts.forEach((unread) => {
+    if (uniqueUsers.has(unread.senderId)) {
+      uniqueUsers.get(unread.senderId).unreadCount = unread._count._all;
+    }
+  });
+
+  const latestMessages = await Promise.all(
+    Array.from(uniqueUsers.keys()).map(async (chatPartnerId) => {
+      return this.prisma.direct_message.findFirst({
+        where: {
+          OR: [
+            { senderId: userId, receiverId: chatPartnerId },
+            { senderId: chatPartnerId, receiverId: userId },
+          ],
+        },
+        orderBy: { createdAt: "desc" },
+        select: {
+          senderId: true,
+          receiverId: true,
+          content: true,
+          isRead: true,
+          createdAt: true,
+        },
+      });
+    }),
+  );
+
+  latestMessages.forEach((msg) => {
+    if (msg) {
+      const chatPartnerId =
+        msg.senderId === userId ? msg.receiverId : msg.senderId;
+      if (uniqueUsers.has(chatPartnerId)) {
+        uniqueUsers.get(chatPartnerId).latestMessage = decrypt(msg.content);
+        uniqueUsers.get(chatPartnerId).latestMessageRead = msg.isRead;
+        uniqueUsers.get(chatPartnerId).latestMessageSenderId = msg.senderId;
       }
     }
+  });
 
-    const unreadCounts = await this.prisma.direct_message.groupBy({
-      by: ["senderId"],
-      where: {
-        receiverId: userId,
-        isRead: false,
-      },
-      _count: {
-        _all: true,
-      },
-    });
-
-    unreadCounts.forEach((unread) => {
-      if (uniqueUsers.has(unread.senderId)) {
-        uniqueUsers.get(unread.senderId).unreadCount = unread._count._all;
-      }
-    });
-
-    const latestMessages = await Promise.all(
-      Array.from(uniqueUsers.keys()).map(async (chatPartnerId) => {
-        return this.prisma.direct_message.findFirst({
-          where: {
-            OR: [
-              { senderId: userId, receiverId: chatPartnerId },
-              { senderId: chatPartnerId, receiverId: userId },
-            ],
-          },
-          orderBy: { createdAt: "desc" },
-          select: {
-            senderId: true,
-            receiverId: true,
-            content: true,
-            isRead: true,
-            createdAt: true,
-          },
-        });
-      }),
-    );
-
-    latestMessages.forEach((msg) => {
-      if (msg) {
-        const chatPartnerId =
-          msg.senderId === userId ? msg.receiverId : msg.senderId;
-        if (uniqueUsers.has(chatPartnerId)) {
-          uniqueUsers.get(chatPartnerId).latestMessage = decrypt(msg.content);
-          uniqueUsers.get(chatPartnerId).latestMessageRead = msg.isRead;
-          uniqueUsers.get(chatPartnerId).latestMessageSenderId = msg.senderId;
-        }
-      }
-    });
-
-    return {
-      users: Array.from(uniqueUsers.values()),
-      totalUsers: uniqueUsers.size,
-      totalPages: Math.ceil(uniqueUsers.size / pageSize),
-      currentPage: page,
-    };
-  }
+  return {
+    users: Array.from(uniqueUsers.values()),
+    totalUsers: uniqueUsers.size,
+    totalPages: Math.ceil(uniqueUsers.size / pageSize),
+    currentPage: page,
+  };
+}
 
   async updateMessageContent(messageId: number, newContent: string) {
     return await this.prisma.direct_message.update({

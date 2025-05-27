@@ -14,8 +14,8 @@ model StoryReaction {
   type      ReactionType
   reactedAt DateTime     @default(now())
 
-  story     Story        @relation(fields: [storyId], references: [id])
-  user      Users        @relation(fields: [userId], references: [id])
+  story     Story        @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  user      Users        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Không cần unique constraint nào ở đây
   @@map("story_reactions")

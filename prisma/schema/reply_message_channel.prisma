@@ -3,8 +3,8 @@ model Reply_message_channel {
     messageId      Int
     replyMessageId Int
 
-    Message      Message @relation("ReplyReceiver", fields: [messageId], references: [id])
-    ReplyMessage Message @relation("ReplySender", fields: [replyMessageId], references: [id])
+    Message      Message @relation("ReplyReceiver", fields: [messageId], references: [id],onDelete: Cascade)
+    ReplyMessage Message @relation("ReplySender", fields: [replyMessageId], references: [id],onDelete: Cascade)
 
     @@unique([messageId, replyMessageId])
     @@map("reply_message_channel")

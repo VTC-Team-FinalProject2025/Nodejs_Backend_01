@@ -12,8 +12,8 @@ model File_direct_message {
     fieldType FileTypeDirectStatus @default(image)
     createdAt DateTime       @default(now())
 
-    User    Users          @relation(fields: [userId], references: [id])
-    Message Direct_message @relation(fields: [messageId], references: [id])
+    User    Users          @relation(fields: [userId], references: [id], onDelete: Cascade)
+    Message Direct_message @relation(fields: [messageId], references: [id], onDelete: Cascade)
 
     @@map("File_direct_message")
 }
