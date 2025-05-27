@@ -54,6 +54,7 @@ class App {
       }),
     );
     this.app.use(express.json());
+    this.app.set('trust proxy', true);
   }
 
   private initializeErrorHandling() {
