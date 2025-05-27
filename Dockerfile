@@ -29,6 +29,7 @@ RUN npm rebuild bcrypt --build-from-source
 # # Cài đặt lại sharp đúng nền tảng
 # RUN npm rebuild sharp --force
 RUN npx prisma generate --schema=./prisma/schema
+RUN npm run push
 
 # Biên dịch TypeScript
 RUN npm run build

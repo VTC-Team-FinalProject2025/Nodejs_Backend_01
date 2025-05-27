@@ -40,7 +40,44 @@ export default class UserController extends BaseController {
       validateSchema(UpdatePasswordFormSchema),
       this.updatePassword,
     );
+    this.router.get("/info", this.getUserInfo);
     this.router.get("/get-call-token", this.getCallToken);
+  }
+
+  private readonly getUserInfo = async (
+    req: express.Request,
+    res: express.Response,
+  ) => {
+    const cookieOptions = {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none" as const,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 ngày
+      path: "/",
+    };
+    const { userId } = req.user;
+    const user = await this.userRepo.getUserById(userId);
+    console.log("User info:", user);
+    // Nếu bạn muốn lưu user info (không nên để HttpOnly nếu cần client truy cập)
+    res.cookie(
+      CookieKeys.USER_INFO,
+      JSON.stringify({ userId: user.id, avatarUrl: user.avatarUrl, loginName: user.loginName, email: user.email, firstName: user.firstName, lastName: user.lastName, phone: user.phone }),
+      {
+        ...cookieOptions,
+      }
+    );
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    res.status(200).json({
+      userId: user.id,
+      avatarUrl: user.avatarUrl,
+      loginName: user.loginName,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      phone: user.phone,
+    });
   }
 
   private readonly updateLoginName = async (

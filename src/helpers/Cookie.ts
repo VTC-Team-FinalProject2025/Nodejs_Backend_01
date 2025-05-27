@@ -8,7 +8,6 @@ const Cookie = {
         response.cookie(key, value, {
             sameSite: 'none',
             path: "/",
-            domain: process.env.NODE_ENV === "production" ? ".duckdns.org" : undefined,
             secure: process.env.NODE_ENV === "production",
             ...options
         });
