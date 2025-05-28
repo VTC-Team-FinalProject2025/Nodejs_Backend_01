@@ -6,7 +6,7 @@ const Cookie = {
         maxAge: 15 * 60 * 1000,
     }) => {
         response.cookie(key, value, {
-            sameSite: 'none',
+            sameSite: "lax",
             path: "/",
             secure: process.env.NODE_ENV === "production",
             ...options

@@ -126,7 +126,9 @@ export default class FileController extends BaseController {
         permissions: permissionStrings ? permissionStrings : [],
       }
       const serverToken = JWT.generateToken(payload, "SERVER_ACCESS");
-      CookieHelper.setCookie(CookieKeys.SERVER_TOKEN, serverToken, res);
+      CookieHelper.setCookie(CookieKeys.SERVER_TOKEN, serverToken, res, {
+        httpOnly: false, maxAge: 15 * 60 * 1000
+      });
 
 
       let Channels = await this.channelRepo.getChannelsByServerId(Number(id));
@@ -215,10 +217,10 @@ export default class FileController extends BaseController {
       }
       let member;
       try {
-         member = await this.serverRepo.joinServer({ userId, serverId: server.id });
-        if(member) {
+        member = await this.serverRepo.joinServer({ userId, serverId: server.id });
+        if (member) {
           const getServer = await this.serverRepo.getServerById(server.id);
-          if(getServer) {
+          if (getServer) {
             await this.notiRepo.createNotification({
               userId: server.ownerId,
               message: `Thành viên ${member.User.loginName} đã tham gia server "${getServer.name}" của bạn.`,

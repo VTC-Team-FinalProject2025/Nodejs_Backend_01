@@ -95,7 +95,10 @@ export default class ChannelController extends BaseController {
           }
         }
       }, "SERVER_ACCESS");
-      CookieHelper.setCookie(CookieKeys.CHANNEL_TOKEN, token, res);
+      CookieHelper.setCookie(CookieKeys.CHANNEL_TOKEN, token, res, {
+        httpOnly: false,
+        maxAge: 15 * 60 * 1000, // 15 minutes
+      });
 
       res.status(200).json(channel);
     } catch (error) {
@@ -158,22 +161,22 @@ export default class ChannelController extends BaseController {
 
   private verifyChannelPassword = async (req: Request, res: Response, next: NextFunction) => {
     const { channelId, password } = req.body;
-  
+
     try {
       const channel = await this.channelRepo.getChannelById(Number(channelId));
       if (!channel) {
         return next(new HttpException(404, "Channel not found"));
       }
-  
+
       if (!channel.password) {
         return next(new HttpException(400, "This channel does not require a password"));
       }
-  
+
       const isMatch = await bcrypt.compare(password, channel.password);
       if (!isMatch) {
         return next(new HttpException(401, "Incorrect password"));
       }
-  
+
       res.status(200).json({ message: "Password verified successfully" });
     } catch (error) {
       next(new HttpException(500, "Internal server error"));
