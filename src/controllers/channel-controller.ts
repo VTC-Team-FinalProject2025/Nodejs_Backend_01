@@ -11,6 +11,8 @@ import JWT from "../helpers/JWT";
 import CookieHelper from "../helpers/Cookie";
 import { CookieKeys } from "../constants";
 import bcrypt from 'bcrypt'; // import thư viện hash
+import { cache } from "../middlewares/cache.middleware";
+import { cacheHelper } from "../helpers/Cache";
 
 
 export default class ChannelController extends BaseController {
@@ -27,11 +29,19 @@ export default class ChannelController extends BaseController {
     this.initializeRoutes();
   }
 
+  private getCachePattern(): string {
+    return `/api/${this.path}*`;
+  }
+
+  private async clearChannelCache(): Promise<void> {
+    await cacheHelper.clearRelatedCache(this.getCachePattern());
+  }
+
   public initializeRoutes() {
     this.router.use(authMiddleware);
     this.router.post(`/`, ValidateSchema(ChannelSchema), this.createChannel);
-    this.router.get(`/:id`, this.getChannelById);
-    this.router.get(`/`, this.getChannels);
+    this.router.get(`/:id`, cache, this.getChannelById);
+    this.router.get(`/`, cache, this.getChannels);
     this.router.put(`/:id`, ValidateSchema(ChannelUpdateSchema), this.updateChannel);
     this.router.delete(`/:id`, this.deleteChannel);
     this.router.post('/verify-password', this.verifyChannelPassword);
@@ -64,6 +74,7 @@ export default class ChannelController extends BaseController {
         return next(new HttpException(400, "Failed to create channel"));
       }
 
+      await this.clearChannelCache();
       res.status(201).json(channel);
     } catch (error) {
       next(new HttpException(500, "Internal server error"));
@@ -97,7 +108,13 @@ export default class ChannelController extends BaseController {
       }, "SERVER_ACCESS");
       CookieHelper.setCookie(CookieKeys.CHANNEL_TOKEN, token, res);
 
-      res.status(200).json(channel);
+      // Set cache for channel data
+      const channelData = {
+        ...channel,
+        token // Include token in cache
+      };
+      await cacheHelper.setResponseCache(req, this.path, channelData);
+      res.status(200).json(channelData);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve channel"));
     }
@@ -111,7 +128,14 @@ export default class ChannelController extends BaseController {
         return next(new HttpException(404, "Server not found"));
       }
       const channels = await this.channelRepo.getChannelsByServerId(Number(serverId));
-      res.status(200).json(channels);
+      
+      // Set cache for channels list
+      const channelsData = channels.map(channel => ({
+        ...channel,
+        password: channel.password ? true : false // Mask password in cache
+      }));
+      await cacheHelper.setResponseCache(req, this.path, channelsData);
+      res.status(200).json(channelsData);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve channels"));
     }
@@ -136,6 +160,7 @@ export default class ChannelController extends BaseController {
         password: hashedPassword,
       });
 
+      await this.clearChannelCache();
       res.status(200).json(updatedChannel);
     } catch (error) {
       next(new HttpException(500, "Failed to update channel"));
@@ -150,6 +175,7 @@ export default class ChannelController extends BaseController {
         return next(new HttpException(404, "Channel not found"));
       }
       await this.channelRepo.deleteChannel(Number(id));
+      await this.clearChannelCache();
       res.status(200).json({ message: "Channel deleted successfully" });
     } catch (error) {
       next(new HttpException(500, "Failed to delete channel"));

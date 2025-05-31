@@ -3,6 +3,8 @@ import { BaseController } from "./abstractions/base-controller";
 import authMiddleware from "../middlewares/authentication.middleware";
 import StoryRepository from "../repositories/storyRepository";
 import HttpException from "../exceptions/http-exception";
+import { cache } from "../middlewares/cache.middleware";
+import { cacheHelper } from "../helpers/Cache";
 
 export default class StoryController extends BaseController {
   private storyRepo: StoryRepository;
@@ -14,12 +16,20 @@ export default class StoryController extends BaseController {
     this.initializeRoutes();
   }
 
+  private getCachePattern(): string {
+    return `/api/${this.path}*`;
+  }
+
+  private async clearStoryCache(): Promise<void> {
+    await cacheHelper.clearRelatedCache(this.getCachePattern());
+  }
+
   public initializeRoutes() {
     this.router.use(authMiddleware);
     this.router.post(`/`, this.createStory);
-    this.router.get(`/`, this.getStories);
+    this.router.get(`/`, cache, this.getStories);
     this.router.post(`/:id/view`, this.markAsViewed);
-    this.router.get(`/:id/views`, this.getStoryViews);
+    this.router.get(`/:id/views`, cache, this.getStoryViews);
     this.router.delete(`/:id`, this.deleteStory);
     this.router.post("/:id/reactions", this.createReaction);
   }
@@ -41,6 +51,7 @@ export default class StoryController extends BaseController {
         allowedUserIds,
         image,
       });
+      await this.clearStoryCache();
       res.status(201).json({ message: "Successfully posted story" });
     } catch (error) {
       next(new HttpException(500, "Failed to create story"));
@@ -57,6 +68,8 @@ export default class StoryController extends BaseController {
 
     try {
       const stories = await this.storyRepo.listStories(userId);
+      // Set cache for stories list with user-specific data
+      await cacheHelper.setResponseCache(req, this.path, stories);
       res.status(200).json(stories);
     } catch (error) {
       next(new HttpException(500, "Failed to get stories"));
@@ -74,6 +87,7 @@ export default class StoryController extends BaseController {
 
     try {
       const view = await this.storyRepo.markStoryAsViewed(storyId, userId);
+      await this.clearStoryCache();
       res.status(200).json({ message: `read story with storyId ${storyId}` });
     } catch (error) {
       next(new HttpException(500, "Failed to mark story as viewed"));
@@ -90,6 +104,8 @@ export default class StoryController extends BaseController {
 
     try {
       const viewers = await this.storyRepo.getStoryViews(storyId);
+      // Set cache for story views with user details
+      await cacheHelper.setResponseCache(req, this.path, viewers);
       res.status(200).json(viewers);
     } catch (error) {
       next(new HttpException(500, "Failed to get story views"));
@@ -107,6 +123,7 @@ export default class StoryController extends BaseController {
 
     try {
       await this.storyRepo.deleteStoryById(storyId, userId);
+      await this.clearStoryCache();
       res.status(204).send();
     } catch (error) {
       next(new HttpException(500, "Failed to delete story"));
@@ -132,6 +149,7 @@ export default class StoryController extends BaseController {
         userId,
         type,
       );
+      await this.clearStoryCache();
       res.status(201).json({ message: "Successfully create reaction" });
     } catch (error) {
       console.error(error);

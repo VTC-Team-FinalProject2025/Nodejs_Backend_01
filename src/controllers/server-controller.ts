@@ -13,9 +13,10 @@ import { InviteLinkSchema } from "../schemas/server";
 import CookieHelper from "../helpers/Cookie";
 import JWT, { ServerAccessTokenPayload } from "../helpers/JWT";
 import UserRepository from "../repositories/UserRepository";
-import { channel } from "diagnostics_channel";
 import RoleRepository from "../repositories/roleRepository";
 import NotificationRepository from "../repositories/notificationRepository";
+import { cache } from "../middlewares/cache.middleware";
+import { cacheHelper } from "../helpers/Cache";
 
 export default class FileController extends BaseController {
   private serverRepo: ServerRepository;
@@ -41,17 +42,25 @@ export default class FileController extends BaseController {
     this.initializeRoutes();
   }
 
+  private getCachePattern(): string {
+    return `/api/${this.path}*`;
+  }
+
+  private async clearServerCache(): Promise<void> {
+    await cacheHelper.clearRelatedCache(this.getCachePattern());
+  }
+
   public initializeRoutes() {
     this.router.use(authMiddleware);
     this.router.post(`/`, this.upload.single("icon"), this.createServer);
-    this.router.get(`/:id`, this.getServerById);
-    this.router.get(`/`, this.getServers);
+    this.router.get(`/:id`, cache, this.getServerById);
+    this.router.get(`/`, cache, this.getServers);
     this.router.put(`/:id`, this.upload.single("icon"), this.updateServer);
     this.router.delete(`/:id`, this.deleteServer);
     this.router.post(`/join`, this.joinServer);
     this.router.post(`/leave/:id`, this.leaveServer);
     this.router.post(`/invite-token`, validateSchema(InviteLinkSchema), this.createInviteLink);
-    this.router.get(`/invite-token/:token`, this.getServerByInviteToken);
+    this.router.get(`/invite-token/:token`, cache, this.getServerByInviteToken);
     this.router.post(`/kick`, this.kickMemberFromServer);
   }
 
@@ -65,6 +74,7 @@ export default class FileController extends BaseController {
     if (!req.file) {
       try {
         server = await this.serverRepo.createServer(name, ownerId, DEFAULT_SERVER_ICON);
+        await this.clearServerCache();
         return res.status(201).json(server);
       } catch (error) {
         return next(new HttpException(500, "Internal server error"));
@@ -74,6 +84,7 @@ export default class FileController extends BaseController {
     if (req.file) await this.fileRepository.uploadImage(req.file, "servers").then(async (url) => {
       try {
         server = await this.serverRepo.createServer(name, ownerId, url);
+        await this.clearServerCache();
         res.status(201).json(server);
       } catch (error) {
         next(new HttpException(500, "Internal server error"));
@@ -114,7 +125,6 @@ export default class FileController extends BaseController {
       const roleId = server.Members.find((member) => member.User.id === userId)?.roleId;
       if (!roleId) return next(new HttpException(403, "You are not a member of this server"));
 
-
       let permissions = server.Roles.find((role) => role.id === roleId)?.RolePermissions;
       let permissionStrings = permissions?.map((p) => p.Permission.name);
       if (server.ownerId === userId && permissionStrings) permissionStrings.push("owner");
@@ -128,7 +138,6 @@ export default class FileController extends BaseController {
       const serverToken = JWT.generateToken(payload, "SERVER_ACCESS");
       CookieHelper.setCookie(CookieKeys.SERVER_TOKEN, serverToken, res);
 
-
       let Channels = await this.channelRepo.getChannelsByServerId(Number(id));
       Channels = Channels.map((channel) => {
         if (channel.password) {
@@ -136,7 +145,9 @@ export default class FileController extends BaseController {
         }
         return channel;
       });
-      res.status(200).json({ ...server, Channels: Channels, Roles: Roles });
+      const response = { ...server, Channels: Channels, Roles: Roles };
+      await cacheHelper.setResponseCache(req, this.path, response);
+      res.status(200).json(response);
     } catch (error) {
       new HttpException(500, "Failed to retrieve server");
     }
@@ -146,6 +157,7 @@ export default class FileController extends BaseController {
     const { userId } = req.user;
     try {
       const servers = await this.serverRepo.getServersByUserId(Number(userId));
+      await cacheHelper.setResponseCache(req, this.path, servers);
       res.status(200).json(servers);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve servers"));
@@ -170,11 +182,13 @@ export default class FileController extends BaseController {
 
       if (!req.file) {
         const updatedServer = await this.serverRepo.updateServer(Number(id), name);
+        await this.clearServerCache();
         return res.status(200).json(updatedServer);
       }
 
       if (req.file) await this.fileRepository.uploadImage(req.file, "servers").then(async (url) => {
         const updatedServer = await this.serverRepo.updateServer(Number(id), name, url);
+        await this.clearServerCache();
         return res.status(200).json(updatedServer);
       }).catch(async (error) => {
         next(new HttpException(400, error))
@@ -196,6 +210,7 @@ export default class FileController extends BaseController {
         return next(new HttpException(403, "You are not the owner of this server "));
       }
       await this.serverRepo.deleteServer(Number(id));
+      await this.clearServerCache();
       res.status(200).json({ message: "Server deleted successfully" });
     } catch (error) {
       next(new HttpException(500, (error as any).message));
@@ -226,6 +241,7 @@ export default class FileController extends BaseController {
             })
           }
         }
+        await this.clearServerCache();
       } catch (error: any) {
         console.log(error);
         return next(new HttpException(400, error.message));
@@ -249,6 +265,7 @@ export default class FileController extends BaseController {
         return next(new HttpException(403, "Owner cannot leave server"));
       }
       await this.serverRepo.leaveServer(userId, Number(id));
+      await this.clearServerCache();
       res.status(200).json({ message: "Left server successfully" });
     } catch (error) {
       next(new HttpException(500, "Failed to leave server"));
@@ -271,6 +288,7 @@ export default class FileController extends BaseController {
         await this.serverRepo.deleteInviteToken(serverId);
       }
       const inviteLink = await this.serverRepo.generateInviteToken({ serverId, count, expireIn });
+      await this.clearServerCache();
       res.status(200).json(inviteLink);
     } catch (error) {
       next(new HttpException(500, error as string));
@@ -284,6 +302,7 @@ export default class FileController extends BaseController {
       if (!server) {
         return next(new HttpException(404, "Server not found"));
       }
+      await cacheHelper.setResponseCache(req, this.path, server);
       res.status(200).json(server);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve server"));
@@ -305,6 +324,7 @@ export default class FileController extends BaseController {
         return next(new HttpException(400, "You can not kick yourself"));
       }
       await this.serverRepo.leaveServer(userId, serverId);
+      await this.clearServerCache();
       res.status(200).json({ message: "Kicked member successfully" });
     } catch (error) {
       next(new HttpException(500, "Failed to kick member"));
