@@ -2,213 +2,118 @@
  * @swagger
  * components:
  *   schemas:
- *    SignupInput:
- *     type: object
- *     required:
- *       - email
- *       - firstName
- *       - lastName
- *       - loginName
- *       - phone
- *       - password
- *       - password_confirmation
- *     properties:
- *       email:
- *         type: string
- *         description: Email của người dùng
- *       firstName:
- *         type: string
- *         description: Họ của người dùng
- *       lastName:
- *         type: string
- *         description: Tên của người dùng
- *       loginName:
- *         type: string
- *         description: Tên đăng nhập của người dùng
- *       phone:
- *         type: string
- *         description: Số điện thoại của người dùng
- *       password:
- *         type: string
- *         description: Mật khẩu của người dùng
- *       password_confirmation:
- *         type: string
- *         description: Xác nhận mật khẩu
- *
- *    LoginInput:
+ *     LoginRequest:
  *       type: object
  *       required:
- *         - input
+ *         - email
  *         - password
  *       properties:
- *         input:
+ *         email:
  *           type: string
- *           description: Email của người dùng hoặc tên đăng nhập
+ *           format: email
+ *           description: The email of the user
  *         password:
  *           type: string
- *           description: Mật khẩu của người dùng
+ *           format: password
+ *           description: The password of the user
+ * 
+ *     RegisterRequest:
+ *       type: object
+ *       required:
+ *         - username
+ *         - email
+ *         - password
+ *       properties:
+ *         username:
+ *           type: string
+ *           description: The username of the user
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: The email of the user
+ *         password:
+ *           type: string
+ *           format: password
+ *           description: The password of the user
+ *         fullName:
+ *           type: string
+ *           description: The full name of the user
+ * 
+ *     AuthResponse:
+ *       type: object
+ *       properties:
+ *         token:
+ *           type: string
+ *           description: JWT access token
+ *         refreshToken:
+ *           type: string
+ *           description: JWT refresh token
+ *         user:
+ *           $ref: '#/components/schemas/User'
  */
 
 /**
  * @swagger
- * /auth/login:
- *   post:
- *     summary: Đăng nhập
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/LoginInput'
- *     responses:
- *       200:
- *         description: Đăng nhập thành công
- *         content:
- *           application/json:
- *            schema:
- *              type: object
- *              properties:
- *                  token:
- *                      type: string
- *                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
- *                  refresh_token:
- *                      type: string
- *                      example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
- *       400:
- *         description: Incorrect password
- *       401:
- *        description: Email is not vertify
- *       402:
- *        description: Account is blocked
- *       404:
- *         description: Account does not exist
- *       500:
- *         description: Internal Server Error
- * /auth/signup:
- *  post:
- *     summary: Đăng ký
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/SignupInput'
- *     responses:
- *       200:
- *         description: Đăng nhập thành công
- *         content:
- *           application/json:
- *            schema:
- *              type: object
- *              properties:
- *                  message:
- *                      type: string
- *                      example: Successful registration
- *       401:
- *         description: Password authentication mismatch
- *       400:
- *         description: Already have an account/Phone number already exists/Login name already exists
- *       500:
- *         description: Internal Server Error
- * /auth/logout:
- *   post:
- *     summary: Đăng xuất
- *     tags: [Auth]
- *     responses:
- *       200:
- *         description: Logout successful
- *       500:
- *         description: Internal Server Error
- *
- * /auth/forgot-password:
- *   post:
- *     summary: Quên mật khẩu
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               email:
- *                 type: string
- *                 description: Email của người dùng
- *     responses:
- *       200:
- *         description: Successful email person
- *       400:
- *         description: Email not filled in/Not an email address
- *       404:
- *         description: This email does not exist
- *       500:
- *         description: Internal Server Error
- *
- * /auth/verify-email:
- *   post:
- *     summary: Xác thực email
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               token:
- *                 type: string
- *                 description: Token xác thực
- *     responses:
- *       200:
- *         description: Vertify email successful
- *       400:
- *         description: Token is invalid
- *       401:
- *        description: Email is already vertify
- *       404:
- *         description: Token not found
- *       500:
- *         description: Internal Server Error
- * /auth/reset-password:
- *   post:
- *     summary: Đặt lại mật khẩu
- *     tags: [Auth]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               token:
- *                 type: string
- *                 description: Token trả về từ api forget password
- *               password:
- *                type: string
- *                description: Mật khẩu mới
- *               password_confirmation:
- *                type: string
- *                description: Xác nhận mật khẩu mới
- *     responses:
- *       200:
- *         description: Password reset successful
- *       400:
- *         description: Token is invalid
- *       401:
- *        description: Password authentication mismatch
- *       404:
- *         description: Token not found
- *       500:
- *         description: Internal Server Error
+ * tags:
+ *   name: Auth
+ *   description: Authentication API
  */
 
 /**
  * @swagger
- * /auth/refresh-token:
+ * /api/auth/login:
  *   post:
- *     summary: Làm mới token truy cập
+ *     summary: Login user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/LoginRequest'
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Invalid credentials
+ */
+
+/**
+ * @swagger
+ * /api/auth/register:
+ *   post:
+ *     summary: Register new user
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/RegisterRequest'
+ *     responses:
+ *       201:
+ *         description: Registration successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Invalid input
+ *       409:
+ *         description: User already exists
+ */
+
+/**
+ * @swagger
+ * /api/auth/refresh-token:
+ *   post:
+ *     summary: Refresh access token
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -216,14 +121,14 @@
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - refreshToken
  *             properties:
  *               refreshToken:
  *                 type: string
- *                 description: Refresh token hợp lệ để lấy token mới
- *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
  *     responses:
  *       200:
- *         description: Trả về access token và refresh token mới
+ *         description: Token refreshed successfully
  *         content:
  *           application/json:
  *             schema:
@@ -231,23 +136,30 @@
  *               properties:
  *                 token:
  *                   type: string
- *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
- *                 refresh_token:
- *                   type: string
- *                   example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MX0.fhc3wykrAnRpcKApKhXiahxaOe8PSHatad31NuIZ0Zg
- *       400:
- *         description: Thiếu refresh token hoặc token không hợp lệ
- *       404:
- *         description: Người dùng không tồn tại
- *       500:
- *         description: Lỗi server
+ *       401:
+ *         description: Invalid refresh token
  */
 
 /**
  * @swagger
- * /auth/resend-verify-email:
+ * /api/auth/logout:
  *   post:
- *     summary: Gửi lại email xác thực
+ *     summary: Logout user
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/auth/forgot-password:
+ *   post:
+ *     summary: Request password reset
  *     tags: [Auth]
  *     requestBody:
  *       required: true
@@ -255,52 +167,73 @@
  *         application/json:
  *           schema:
  *             type: object
+ *             required:
+ *               - email
  *             properties:
  *               email:
  *                 type: string
- *                 description: email của người dùng cần gửi lại email xác thực
- *                 example: abcde@gmail.com
+ *                 format: email
  *     responses:
  *       200:
- *         description: Trả về message gửi email thành công
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: Successful email person
+ *         description: Password reset email sent
  *       400:
- *        content:
- *         application/json:
- *          schema:
- *              type: object
- *              properties:
- *                  message:
- *                      type: string
- *                      example: Message của lỗi
- *                  code:
- *                      type: string
- *                      example: MÃ_LỖI
- *          examples:
- *               EMAIL_NOT_FILLED:
- *                   summary: Email không được để trống
- *                   value:
- *                       message: Email not filled in
- *                       code: EMAIL_NOT_FILLED
- *               NOT_AN_EMAIL:
- *                   summary: Không đúng định dạng email
- *                   value:
- *                       message: Not an email address
- *                       code: NOT_AN_EMAIL
- *               EMAIL_ALREADY_VERTIFY:
- *                   summary: Email đã xác thực trước đó
- *                   value:
- *                       message: Email is already vertify
- *                       code: EMAIL_ALREADY_VERTIFY
+ *         description: Invalid input
  *       404:
- *         description: This email does not exist
- *       500:
- *         description: Server Internal Error
+ *         description: User not found
+ */
+
+/**
+ * @swagger
+ * /api/auth/reset-password:
+ *   post:
+ *     summary: Reset password
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *               - password
+ *             properties:
+ *               token:
+ *                 type: string
+ *               password:
+ *                 type: string
+ *                 format: password
+ *     responses:
+ *       200:
+ *         description: Password reset successful
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Invalid or expired token
+ */
+
+/**
+ * @swagger
+ * /api/auth/verify-email:
+ *   post:
+ *     summary: Verify email
+ *     tags: [Auth]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - token
+ *             properties:
+ *               token:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Email verified successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Invalid or expired token
  */

@@ -26,6 +26,33 @@
  *         senderId:
  *           type: number
  *           description: ID của người cần thực hiện hành động (xác nhận, hủy, chặn, mở chặn)
+ *     Friend:
+ *       type: object
+ *       required:
+ *         - userId1
+ *         - userId2
+ *       properties:
+ *         id:
+ *           type: integer
+ *           description: The auto-generated id of the friendship
+ *         userId1:
+ *           type: integer
+ *           description: The ID of the first user
+ *         userId2:
+ *           type: integer
+ *           description: The ID of the second user
+ *         status:
+ *           type: string
+ *           enum: [PENDING, ACCEPTED, BLOCKED]
+ *           description: The status of the friendship
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the friendship was created
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *           description: The date the friendship was last updated
  *
  *   securitySchemes:
  *     BearerAuth:
@@ -36,190 +63,329 @@
 
 /**
  * @swagger
- * /friend/make-friend:
+ * tags:
+ *   name: Friends
+ *   description: Friend management API
+ */
+
+/**
+ * @swagger
+ * /api/friend/make-friend:
  *   post:
- *     summary: Gửi yêu cầu kết bạn
- *     tags: [Friend]
+ *     summary: Send a friend request
+ *     tags: [Friends]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/MakeFriendRequest'
+ *             type: object
+ *             required:
+ *               - friendId
+ *             properties:
+ *               friendId:
+ *                 type: integer
  *     responses:
- *       200:
- *         description: Yêu cầu kết bạn đã được gửi thành công
- *       404:
- *         description: Không thể gửi yêu cầu kết bạn cho chính bạn hoặc mối quan hệ đã tồn tại
+ *       201:
+ *         description: Friend request sent successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  */
 
 /**
  * @swagger
- * /friend/accept-friend:
+ * /api/friend/accept-friend:
  *   put:
- *     summary: Chấp nhận yêu cầu kết bạn
- *     tags: [Friend]
+ *     summary: Accept a friend request
+ *     tags: [Friends]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/AcceptFriendRequest'
+ *             type: object
+ *             required:
+ *               - friendId
+ *             properties:
+ *               friendId:
+ *                 type: integer
  *     responses:
  *       200:
- *         description: Yêu cầu kết bạn đã được chấp nhận thành công
- *       404:
- *         description: Yêu cầu kết bạn không tồn tại
+ *         description: Friend request accepted successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  */
 
 /**
  * @swagger
- * /friend/block-friend:
+ * /api/friend/block-friend:
  *   put:
- *     summary: Chặn bạn
- *     tags: [Friend]
+ *     summary: Block a friend
+ *     tags: [Friends]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/FriendAction'
+ *             type: object
+ *             required:
+ *               - friendId
+ *             properties:
+ *               friendId:
+ *                 type: integer
  *     responses:
  *       200:
- *         description: Người bạn đã bị chặn thành công
- *       404:
- *         description: Mối quan hệ kết bạn không tồn tại
+ *         description: Friend blocked successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  */
 
 /**
  * @swagger
- * /friend/lists-friend:
+ * /api/friend/lists-friend:
  *   get:
- *     summary: Lấy danh sách bạn bè
- *     tags: [Friend]
+ *     summary: Get list of friends
+ *     tags: [Friends]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of friends
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Friend'
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/friend-request-list:
+ *   get:
+ *     summary: Get list of friend requests
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of friend requests
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Friend'
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/list-friend-online:
+ *   get:
+ *     summary: Get list of online friends
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of online friends
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Friend'
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/list-friend-block:
+ *   get:
+ *     summary: Get list of blocked friends
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of blocked friends
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Friend'
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/list-friend-suggestions:
+ *   get:
+ *     summary: Get friend suggestions
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: List of friend suggestions
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Friend'
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/search-friend:
+ *   get:
+ *     summary: Search for friends
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Trang hiện tại
- *         example: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Số lượng bản ghi trên mỗi trang
- *         example: 10
- *       - in: query
- *         name: search
+ *         name: query
+ *         required: true
  *         schema:
  *           type: string
- *         description: Từ khóa tìm kiếm
- *         example: John
  *     responses:
  *       200:
- *         description: Danh sách bạn bè được trả về thành công
+ *         description: Search results
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Friend'
+ *       401:
+ *         description: Unauthorized
  */
 
 /**
  * @swagger
- * /friend/friend-request-list:
+ * /api/friend/cancel-friend:
+ *   delete:
+ *     summary: Cancel a friend request
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - friendId
+ *             properties:
+ *               friendId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Friend request cancelled successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/unfriend:
+ *   delete:
+ *     summary: Remove a friend
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - friendId
+ *             properties:
+ *               friendId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Friend removed successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/unblock:
+ *   delete:
+ *     summary: Unblock a friend
+ *     tags: [Friends]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - friendId
+ *             properties:
+ *               friendId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Friend unblocked successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/friend/get-call-token:
  *   get:
- *     summary: Lấy danh sách yêu cầu kết bạn
- *     tags: [Friend]
+ *     summary: Get call token
+ *     tags: [Friends]
  *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: page
- *         schema:
- *           type: integer
- *         description: Trang hiện tại
- *         example: 1
- *       - in: query
- *         name: limit
- *         schema:
- *           type: integer
- *         description: Số lượng bản ghi trên mỗi trang
- *         example: 10
- *       - in: query
- *         name: search
- *         schema:
- *           type: string
- *         description: Từ khóa tìm kiếm
- *         example: John
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Danh sách yêu cầu kết bạn được trả về thành công
- */
-
-/**
- * @swagger
- * /friend/cancel-friend:
- *   delete:
- *     summary: Hủy yêu cầu kết bạn
- *     tags: [Friend]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/FriendAction'
- *     responses:
- *       200:
- *         description: Yêu cầu kết bạn đã được hủy thành công
- *       404:
- *         description: Yêu cầu kết bạn không tồn tại
- */
-
-/**
- * @swagger
- * /friend/unfriend:
- *   delete:
- *     summary: Hủy kết bạn
- *     tags: [Friend]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/FriendAction'
- *     responses:
- *       200:
- *         description: Đã hủy kết bạn thành công
- *       404:
- *         description: Mối quan hệ kết bạn không tồn tại
- */
-
-/**
- * @swagger
- * /friend/unblock:
- *   delete:
- *     summary: Mở chặn bạn
- *     tags: [Friend]
- *     security:
- *       - BearerAuth: []
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             $ref: '#/components/schemas/FriendAction'
- *     responses:
- *       200:
- *         description: Mở chặn thành công
- *       404:
- *         description: Mối quan hệ kết bạn không tồn tại
+ *         description: Call token generated successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 token:
+ *                   type: string
+ *       401:
+ *         description: Unauthorized
  */

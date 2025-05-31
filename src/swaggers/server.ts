@@ -38,27 +38,18 @@
  *       scheme: bearer
  *       bearerFormat: JWT
  *
- * /servers:
+ * /api/servers:
  *   post:
  *     summary: Create a new server
- *     tags: [Server]
+ *     tags: [Servers]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - name
- *             properties:
- *               name:
- *                 type: string
- *                 description: Name of the server
- *               icon:
- *                 type: string
- *                 format: binary
+ *             $ref: '#/components/schemas/CreateServerInput'
  *     responses:
  *       201:
  *         description: Server created successfully
@@ -67,15 +58,15 @@
  *             schema:
  *               $ref: '#/components/schemas/Server'
  *       400:
- *         description: Failed to create server
- *       500:
- *         description: Internal server error
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *
  *   get:
- *     summary: Get servers for the authenticated user
- *     tags: [Server]
+ *     summary: Get all servers
+ *     tags: [Servers]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of servers
@@ -85,22 +76,21 @@
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Server'
- *       500:
- *         description: Failed to retrieve servers
+ *       401:
+ *         description: Unauthorized
  *
- * /servers/{id}:
+ * /api/servers/{id}:
  *   get:
  *     summary: Get server by ID
- *     tags: [Server]
+ *     tags: [Servers]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID of the server
  *     responses:
  *       200:
  *         description: Server details
@@ -108,60 +98,45 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Server'
- *       403:
- *         description: Unauthorized access
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Server not found
- *       500:
- *         description: Failed to retrieve server
  *   delete:
  *     summary: Delete server
- *     tags: [Server]
+ *     tags: [Servers]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID of the server
  *     responses:
  *       200:
  *         description: Server deleted successfully
- *       403:
- *         description: Unauthorized access
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Server not found
- *       500:
- *         description: Failed to delete server
  *   put:
  *     summary: Update server
- *     tags: [Server]
+ *     tags: [Servers]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID of the server
  *     requestBody:
  *       required: true
  *       content:
- *         multipart/form-data:
+ *         application/json:
  *           schema:
- *             type: object
- *             required:
- *               - name
- *             properties:
- *               name:
- *                 type: string
- *                 description: Updated name of the server
- *               icon:
- *                 type: string
- *                 format: binary
+ *             $ref: '#/components/schemas/UpdateServerInput'
  *     responses:
  *       200:
  *         description: Server updated successfully
@@ -169,14 +144,14 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Server'
- *       403:
- *         description: Unauthorized access
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Server not found
- *       500:
- *         description: Failed to update server
  *
- * /servers/join:
+ * /api/servers/join:
  *   post:
  *     summary: Join a server using an invite token
  *     tags: [Server]
@@ -206,7 +181,7 @@
  *       500:
  *         description: Internal server error
  *
- * /servers/leave/{id}:
+ * /api/servers/leave/{id}:
  *   post:
  *     summary: Leave a server
  *     tags: [Server]
@@ -229,7 +204,7 @@
  *       500:
  *         description: Failed to leave server
  *
- * /servers/invite-token:
+ * /api/servers/invite-token:
  *   post:
  *     summary: Create an invite link for a server
  *     tags: [Server]
@@ -268,5 +243,87 @@
  *         description: Server not found
  *       500:
  *         description: Failed to create invite link
+ *
+ * /api/servers/{serverId}/members:
+ *   get:
+ *     summary: Get server members
+ *     tags: [Servers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: serverId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of server members
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Server not found
+ *   post:
+ *     summary: Add member to server
+ *     tags: [Servers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: serverId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - userId
+ *             properties:
+ *               userId:
+ *                 type: integer
+ *     responses:
+ *       201:
+ *         description: Member added successfully
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Server not found
+ *
+ * /api/servers/{serverId}/members/{userId}:
+ *   delete:
+ *     summary: Remove member from server
+ *     tags: [Servers]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: serverId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Member removed successfully
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Server or member not found
  */
 
