@@ -2,46 +2,93 @@
  * @swagger
  * components:
  *   schemas:
- *     UploadFileInput:
+ *     UploadResponse:
  *       type: object
- *       required:
- *         - file
- *         - folderName
  *       properties:
- *         file:
+ *         message:
  *           type: string
- *           format: binary
- *           description: Ảnh cần upload
- *         folderName:
+ *           description: Success message
+ *         imageUrl:
  *           type: string
- *           description: Tên thư mục lưu ảnh trên Firebase
- *
- * /files/upload:
+ *           description: URL of the uploaded file
+ */
+
+/**
+ * @swagger
+ * tags:
+ *   name: Upload
+ *   description: File upload API
+ */
+
+/**
+ * @swagger
+ * /api/upload/upload:
  *   post:
- *     summary: Upload tệp lên Firebase Storage
- *     tags: [Files]
+ *     summary: Upload an image file
+ *     tags: [Upload]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         multipart/form-data:
  *           schema:
- *             $ref: '#/components/schemas/UploadFileInput'
+ *             type: object
+ *             properties:
+ *               image:
+ *                 type: string
+ *                 format: binary
+ *                 description: The image file to upload
+ *               folderName:
+ *                 type: string
+ *                 description: Optional folder name to store the file
  *     responses:
  *       200:
- *         description: Upload thành công
+ *         description: File uploaded successfully
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Tải ảnh lên thành công!"
- *                 imageUrl:
- *                   type: string
- *                   example: "https://storage.googleapis.com/your-bucket/user-avatars/1692798001234.jpg"
+ *               $ref: '#/components/schemas/UploadResponse'
  *       400:
- *         description: File không hợp lệ hoặc vượt quá dung lượng 5MB
- *       500:
- *         description: Internal Server Error
+ *         description: No file uploaded
+ *       401:
+ *         description: Unauthorized
+ */
+
+/**
+ * @swagger
+ * /api/upload/upload-media:
+ *   post:
+ *     summary: Upload a media file
+ *     tags: [Upload]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - media
+ *               - folderName
+ *             properties:
+ *               media:
+ *                 type: string
+ *                 format: binary
+ *                 description: The media file to upload
+ *               folderName:
+ *                 type: string
+ *                 description: Folder name to store the file
+ *     responses:
+ *       200:
+ *         description: Media file uploaded successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/UploadResponse'
+ *       400:
+ *         description: No file uploaded or missing folder name
+ *       401:
+ *         description: Unauthorized
  */

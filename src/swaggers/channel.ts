@@ -59,18 +59,18 @@
  *           type: string
  *           description: Optional password for the channel
  *
- * /channels:
+ * /api/channels:
  *   post:
  *     summary: Create a new channel
- *     tags: [Channel]
+ *     tags: [Channels]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ChannelCreate'
+ *             $ref: '#/components/schemas/CreateChannelInput'
  *     responses:
  *       201:
  *         description: Channel created successfully
@@ -79,22 +79,15 @@
  *             schema:
  *               $ref: '#/components/schemas/Channel'
  *       400:
- *         description: Failed to create channel
- *       500:
- *         description: Internal server error
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *
  *   get:
- *     summary: Get all channels for a specific server
- *     tags: [Channel]
+ *     summary: Get all channels
+ *     tags: [Channels]
  *     security:
- *       - BearerAuth: []
- *     parameters:
- *       - in: query
- *         name: serverId
- *         schema:
- *           type: integer
- *         required: true
- *         description: ID of the server
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: List of channels
@@ -104,54 +97,50 @@
  *               type: array
  *               items:
  *                 $ref: '#/components/schemas/Channel'
- *       404:
- *         description: Server not found
- *       500:
- *         description: Failed to retrieve channels
+ *       401:
+ *         description: Unauthorized
  *
- * /channels/{id}:
+ * /api/channels/{id}:
  *   get:
- *     summary: Get a channel by ID
- *     tags: [Channel]
+ *     summary: Get channel by ID
+ *     tags: [Channels]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID of the channel
  *     responses:
  *       200:
- *         description: Channel data
+ *         description: Channel details
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Channel'
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Channel not found
- *       500:
- *         description: Failed to retrieve channel
  *
  *   put:
- *     summary: Update a channel
- *     tags: [Channel]
+ *     summary: Update channel
+ *     tags: [Channels]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID of the channel
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
- *             $ref: '#/components/schemas/ChannelUpdate'
+ *             $ref: '#/components/schemas/UpdateChannelInput'
  *     responses:
  *       200:
  *         description: Channel updated successfully
@@ -159,29 +148,95 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Channel'
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Channel not found
- *       500:
- *         description: Failed to update channel
  *
  *   delete:
- *     summary: Delete a channel
- *     tags: [Channel]
+ *     summary: Delete channel
+ *     tags: [Channels]
  *     security:
- *       - BearerAuth: []
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
+ *         required: true
  *         schema:
  *           type: integer
- *         required: true
- *         description: ID of the channel
  *     responses:
  *       200:
  *         description: Channel deleted successfully
+ *       401:
+ *         description: Unauthorized
  *       404:
  *         description: Channel not found
- *       500:
- *         description: Failed to delete channel
+ *
+ * /api/channels/{channelId}/messages:
+ *   get:
+ *     summary: Get channel messages
+ *     tags: [Channels]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: channelId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: List of messages
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 $ref: '#/components/schemas/Message'
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Channel not found
+ *
+ *   post:
+ *     summary: Send message to channel
+ *     tags: [Channels]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: channelId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/CreateMessageInput'
+ *     responses:
+ *       201:
+ *         description: Message sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Message'
+ *       400:
+ *         description: Invalid input
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Channel not found
  */
 

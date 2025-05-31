@@ -20,30 +20,45 @@ const paginate = async <T>(
   includeFields?: object,
   orderBy?: object
 ): Promise<PaginationResult<T>> => {
-  const skip = (page - 1) * limit;
+  try {
+    const skip = (page - 1) * limit;
 
-  const [data, total] = await Promise.all([
-    model.findMany({
-      where: filterCondition,
-      include: includeFields,
-      skip,
-      take: limit,
-      orderBy,
-    }),
-    model.count({ where: filterCondition }),
-  ]);
+    // Validate model methods
+    if (typeof model.findMany !== 'function' || typeof model.count !== 'function') {
+      throw new Error('Invalid model: findMany and count methods are required');
+    }
 
-  return {
-    data,
-    pagination: {
-      total,
-      page,
-      limit,
-      totalPages: Math.ceil(total / limit),
-      hasNextPage: page * limit < total,
-      hasPrevPage: page > 1,
-    },
-  };
+    // Validate filter condition
+    const where = filterCondition && typeof filterCondition === 'object' 
+      ? filterCondition 
+      : {};
+
+    const [data, total] = await Promise.all([
+      model.findMany({
+        where,
+        include: includeFields || {},
+        skip,
+        take: limit,
+        orderBy: orderBy || { createdAt: 'desc' },
+      }),
+      model.count({ where }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
+      },
+    };
+  } catch (error) {
+    console.error('Pagination error:', error);
+    throw error;
+  }
 };
 
 export default paginate;
