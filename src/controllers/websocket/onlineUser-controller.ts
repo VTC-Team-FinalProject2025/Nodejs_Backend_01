@@ -38,7 +38,7 @@ export class OnlineUserController {
 
       socket.on("saveTokenNotification", async (token: string) => {
         if(token) {
-          await this.notiRepo.saveTokenNotification(Number(userId), String(token));
+          await this.notiRepo.createTokenNotification(Number(userId), String(token));
         }
       });
       

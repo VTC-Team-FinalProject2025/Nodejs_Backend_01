@@ -60,7 +60,7 @@ export default class FileController extends BaseController {
     this.router.post(`/join`, this.joinServer);
     this.router.post(`/leave/:id`, this.leaveServer);
     this.router.post(`/invite-token`, validateSchema(InviteLinkSchema), this.createInviteLink);
-    this.router.get(`/invite-token/:token`, cache, this.getServerByInviteToken);
+    this.router.get(`/invite-token/:token`, this.getServerByInviteToken);
     this.router.post(`/kick`, this.kickMemberFromServer);
   }
 
@@ -148,7 +148,7 @@ export default class FileController extends BaseController {
         return channel;
       });
       const response = { ...server, Channels: Channels, Roles: Roles };
-      await cacheHelper.setResponseCache(req, this.path, response);
+      await cacheHelper.setResponseCache(req, `${this.path}_${userId}`, response);
       res.status(200).json(response);
     } catch (error) {
       new HttpException(500, "Failed to retrieve server");
@@ -159,7 +159,7 @@ export default class FileController extends BaseController {
     const { userId } = req.user;
     try {
       const servers = await this.serverRepo.getServersByUserId(Number(userId));
-      await cacheHelper.setResponseCache(req, this.path, servers);
+      await cacheHelper.setResponseCache(req, `${this.path}_${userId}`, servers);
       res.status(200).json(servers);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve servers"));
@@ -304,7 +304,6 @@ export default class FileController extends BaseController {
       if (!server) {
         return next(new HttpException(404, "Server not found"));
       }
-      await cacheHelper.setResponseCache(req, this.path, server);
       res.status(200).json(server);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve server"));

@@ -21,6 +21,7 @@ export default class StoryController extends BaseController {
   }
 
   private async clearStoryCache(): Promise<void> {
+    // Clear all story-related cache since stories can affect multiple users
     await cacheHelper.clearRelatedCache(this.getCachePattern());
   }
 
@@ -32,6 +33,7 @@ export default class StoryController extends BaseController {
     this.router.get(`/:id/views`, cache, this.getStoryViews);
     this.router.delete(`/:id`, this.deleteStory);
     this.router.post("/:id/reactions", this.createReaction);
+    this.router.patch("/:id/visibility", this.updateStoryVisibility);
   }
 
   // POST /stories – tạo story
@@ -69,7 +71,7 @@ export default class StoryController extends BaseController {
     try {
       const stories = await this.storyRepo.listStories(userId);
       // Set cache for stories list with user-specific data
-      await cacheHelper.setResponseCache(req, this.path, stories);
+      await cacheHelper.setResponseCache(req, `${this.path}_${userId}`, stories);
       res.status(200).json(stories);
     } catch (error) {
       next(new HttpException(500, "Failed to get stories"));
@@ -101,11 +103,11 @@ export default class StoryController extends BaseController {
     next: NextFunction,
   ) => {
     const storyId = Number(req.params.id);
-
+    const userId = req.user.userId;
     try {
       const viewers = await this.storyRepo.getStoryViews(storyId);
       // Set cache for story views with user details
-      await cacheHelper.setResponseCache(req, this.path, viewers);
+      await cacheHelper.setResponseCache(req, `${this.path}_${userId}`, viewers);
       res.status(200).json(viewers);
     } catch (error) {
       next(new HttpException(500, "Failed to get story views"));
@@ -154,6 +156,40 @@ export default class StoryController extends BaseController {
     } catch (error) {
       console.error(error);
       next(new HttpException(500, "Failed to create reaction"));
+    }
+  };
+
+  // PATCH /stories/:id/visibility - Update story visibility
+  private updateStoryVisibility = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    const storyId = Number(req.params.id);
+    const userId = req.user.userId;
+    const { visibility, allowedUserIds } = req.body;
+
+    if (!visibility) {
+      return res.status(400).json({ message: "Visibility is required" });
+    }
+
+    if (visibility === "CUSTOM" && (!allowedUserIds || !Array.isArray(allowedUserIds))) {
+      return res.status(400).json({ message: "Allowed users are required for CUSTOM visibility" });
+    }
+
+    try {
+      await this.storyRepo.updateStoryVisibility(storyId, userId, {
+        visibility,
+        allowedUserIds,
+      });
+      await this.clearStoryCache();
+      res.status(200).json({ message: "Successfully updated story visibility" });
+    } catch (error) {
+      if (error.message === "Story not found or permission denied") {
+        next(new HttpException(404, error.message));
+      } else {
+        next(new HttpException(500, "Failed to update story visibility"));
+      }
     }
   };
 }

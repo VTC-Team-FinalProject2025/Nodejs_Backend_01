@@ -3,8 +3,14 @@ import { cacheHelper } from '../helpers/Cache';
 
 export const cache = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    // Don't add /api here since CacheHelper will handle it
-    const cacheKey = cacheHelper.getCacheKey(req, req.baseUrl);
+    // Get userId from request if available
+    const userId = req.user?.userId;
+    
+    // Create cache key with userId if available
+    const cacheKey = userId 
+      ? `${req.baseUrl}_${userId}`
+      : req.baseUrl;
+      
     const cachedData = await cacheHelper.getCache(cacheKey);
 
     if (cachedData) {
@@ -16,7 +22,7 @@ export const cache = async (req: Request, res: Response, next: NextFunction) => 
 
     // Override json method
     res.json = function(data: any) {
-      // Cache the response data
+      // Cache the response data with user-specific key
       cacheHelper.setCache(cacheKey, data).catch(console.error);
       
       // Call original json method
