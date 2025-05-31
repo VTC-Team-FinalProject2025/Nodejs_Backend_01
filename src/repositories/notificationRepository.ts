@@ -91,15 +91,29 @@ export default class NotificationRepository {
     });
   }
 
-  async saveTokenNotification(userId: number, token: string) {
-    const existingToken = await this.prisma.tokenNotification.findFirst({
-      where: { userId, token },
+  async createTokenNotification(userId: number, token: string) {
+    // Check if token already exists
+    const existingToken = await this.prisma.tokenNotification.findUnique({
+      where: { token },
     });
 
-    if (existingToken) return existingToken;
+    if (existingToken) {
+      // If token exists, update the userId if it's different
+      if (existingToken.userId !== userId) {
+        return await this.prisma.tokenNotification.update({
+          where: { token },
+          data: { userId },
+        });
+      }
+      return existingToken;
+    }
 
+    // If token doesn't exist, create new one
     return await this.prisma.tokenNotification.create({
-      data: { userId, token },
+      data: {
+        userId,
+        token,
+      },
     });
   }
 }

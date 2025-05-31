@@ -113,7 +113,7 @@ export default class ChannelController extends BaseController {
         ...channel,
         token // Include token in cache
       };
-      await cacheHelper.setResponseCache(req, this.path, channelData);
+      await cacheHelper.setResponseCache(req, `${this.path}_${userId}`, channelData);
       res.status(200).json(channelData);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve channel"));
@@ -122,6 +122,7 @@ export default class ChannelController extends BaseController {
 
   private getChannels = async (req: Request, res: Response, next: NextFunction) => {
     const { serverId } = req.query;
+    const userId = req.user.userId;
     try {
       const server = await this.serverRepo.getServerById(Number(serverId));
       if (!server) {
@@ -134,7 +135,7 @@ export default class ChannelController extends BaseController {
         ...channel,
         password: channel.password ? true : false // Mask password in cache
       }));
-      await cacheHelper.setResponseCache(req, this.path, channelsData);
+      await cacheHelper.setResponseCache(req, `${this.path}_${userId}`, channelsData);
       res.status(200).json(channelsData);
     } catch (error) {
       next(new HttpException(500, "Failed to retrieve channels"));

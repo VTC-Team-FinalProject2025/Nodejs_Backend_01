@@ -194,4 +194,33 @@ export default class StoryRepository {
       },
     });
   }
+
+  // ✅ Update story visibility and allowed users
+  async updateStoryVisibility(storyId: number, userId: number, data: {
+    visibility: StoryVisibility;
+    allowedUserIds?: number[];
+  }) {
+    // Check if story exists and user has permission
+    const story = await this.prisma.story.findFirst({
+      where: { id: storyId, userId },
+    });
+
+    if (!story) throw new Error("Story not found or permission denied");
+
+    // Update story with new visibility and allowed users
+    return this.prisma.story.update({
+      where: { id: storyId },
+      data: {
+        visibility: data.visibility,
+        allowedUsers: data.visibility === "CUSTOM" 
+          ? {
+              deleteMany: {}, // Remove all existing allowed users
+              create: data.allowedUserIds?.map((id) => ({
+                user: { connect: { id } },
+              })),
+            }
+          : undefined,
+      },
+    });
+  }
 }
