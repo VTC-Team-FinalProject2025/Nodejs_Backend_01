@@ -46,9 +46,12 @@ export default class StoryRepository {
 
     if (!story) throw new Error("Story not found or permission denied");
 
-    return this.prisma.story.delete({
-      where: { id: storyId },
-    });
+    // Delete related records and story in a transaction
+    return this.prisma.$transaction([
+      this.prisma.storyView.deleteMany({ where: { storyId } }),
+      this.prisma.storyReaction.deleteMany({ where: { storyId } }),
+      this.prisma.story.delete({ where: { id: storyId } })
+    ]);
   }
 
   // ✅ Ghi lại lượt xem story
@@ -157,20 +160,32 @@ export default class StoryRepository {
           where: { userId },
           select: { viewedAt: true },
         },
+        allowedUsers: {
+          select: {
+            userId: true
+          }
+        }
       },
     });
 
     const grouped = new Map<number, any>();
 
     for (const story of stories) {
-      const { user, ...storyData } = story;
+      const { user, allowedUsers, ...storyData } = story;
       if (!grouped.has(user.id)) {
         grouped.set(user.id, {
           user,
           stories: [],
         });
       }
-      grouped.get(user.id).stories.push(storyData);
+      // Add allowedUserIds to story data if visibility is CUSTOM
+      const storyWithAllowedUsers = {
+        ...storyData,
+        allowedUserIds: storyData.visibility === "CUSTOM" 
+          ? allowedUsers.map(au => au.userId)
+          : undefined
+      };
+      grouped.get(user.id).stories.push(storyWithAllowedUsers);
     }
 
     const groupedArray = Array.from(grouped.values());

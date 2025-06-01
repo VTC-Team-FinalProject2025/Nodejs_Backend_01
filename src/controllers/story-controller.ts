@@ -126,7 +126,7 @@ export default class StoryController extends BaseController {
     try {
       await this.storyRepo.deleteStoryById(storyId, userId);
       await this.clearStoryCache();
-      res.status(204).send();
+      res.status(200).json({ message: `read story with storyId ${storyId}` });
     } catch (error) {
       next(new HttpException(500, "Failed to delete story"));
     }
