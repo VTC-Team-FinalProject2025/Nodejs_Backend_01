@@ -166,6 +166,42 @@ export default class FriendShipRepository {
     });
   }
 
+  async getMutualFriendsCount(userId: number, suggestedUserId: number) {
+    const userFriends = await this.listFriendUser(userId);
+    const userFriendIds = userFriends.map((f) =>
+      f.senderId === userId ? f.receiverId : f.senderId,
+    );
+
+    const suggestedUserFriends = await this.listFriendUser(suggestedUserId);
+    const suggestedUserFriendIds = suggestedUserFriends.map((f) =>
+      f.senderId === suggestedUserId ? f.receiverId : f.senderId,
+    );
+
+    // Tìm ID của bạn chung
+    const mutualFriendIds = userFriendIds.filter(id => 
+      suggestedUserFriendIds.includes(id) && id !== userId && id !== suggestedUserId
+    );
+
+    // Lấy thông tin chi tiết của bạn chung (giới hạn 5 người)
+    const mutualFriends = await this.prisma.users.findMany({
+      where: {
+        id: {
+          in: mutualFriendIds.slice(0, 5)
+        }
+      },
+      select: {
+        id: true,
+        loginName: true,
+        avatarUrl: true
+      }
+    });
+
+    return {
+      count: mutualFriendIds.length,
+      friends: mutualFriends
+    };
+  }
+
   async getExcludedUsers(userId: number) {
     const friendships = await this.prisma.friendship.findMany({
       where: {
@@ -192,5 +228,35 @@ export default class FriendShipRepository {
     });
 
     return Array.from(excludedUserIds);
+  }
+
+  async getTotalPendingFriendRequests(userId: number) {
+    return await this.prisma.friendship.count({
+      where: {
+        receiverId: userId,
+        status: "pending"
+      }
+    });
+  }
+
+  async getTotalSuggestedFriends(userId: number) {
+    const friends = await this.listFriendUser(userId);
+    const friendIds = friends.map((f) =>
+      f.senderId === userId ? f.receiverId : f.senderId,
+    );
+
+    const suggestedFriends = await this.suggestedFriends(friendIds);
+    const suggestedFriendIds = new Set();
+    
+    suggestedFriends.forEach((f) => {
+      if (f.senderId !== userId && !friendIds.includes(f.senderId)) {
+        suggestedFriendIds.add(f.senderId);
+      }
+      if (f.receiverId !== userId && !friendIds.includes(f.receiverId)) {
+        suggestedFriendIds.add(f.receiverId);
+      }
+    });
+
+    return suggestedFriendIds.size;
   }
 }

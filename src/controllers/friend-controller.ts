@@ -14,15 +14,6 @@ import { Database } from "firebase-admin/database";
 import NotificationRepository from "../repositories/notificationRepository";
 import UserRepository from "../repositories/UserRepository";
 import JWT from "../helpers/JWT";
-import { CookieKeys } from "../constants";
-import Cookie from "../helpers/Cookie";
-
-interface User {
-  id: number;
-  loginName: string;
-  avatarUrl: string;
-}
-
 export default class FriendShipController extends BaseController {
   public friendShipRepo: FriendShipRepository;
   public prisma: PrismaClient;
@@ -69,6 +60,7 @@ export default class FriendShipController extends BaseController {
     this.router.delete("/unfriend", this.unFriendRequest);
     this.router.delete("/unblock", this.unblock);
     this.router.get("/get-call-token", this.getCallToken);
+    this.router.get("/friend-counts", this.getFriendCounts);
   }
 
   makeFriend = async (
@@ -534,12 +526,27 @@ friendsList = async (
       Number(limit),
     );
 
+    // Lấy thông tin bạn chung cho mỗi người dùng được đề xuất
+    const usersWithMutualFriends = await Promise.all(
+      users.map(async (user) => {
+        const mutualFriendsInfo = await this.friendShipRepo.getMutualFriendsCount(
+          userId,
+          user.id
+        );
+        return {
+          ...user,
+          mutualFriends: mutualFriendsInfo.count,
+          mutualFriendsList: mutualFriendsInfo.friends
+        };
+      })
+    );
+
     const totalPages = Math.ceil(Number(total) / Number(limit));
     const hasNextPage = Number(page) < totalPages;
     const hasPrevPage = Number(page) > 1;
 
     response.json({
-      data: users,
+      data: usersWithMutualFriends,
       pagination: {
         total,
         page,
@@ -607,4 +614,26 @@ friendsList = async (
     }, "SERVER_ACCESS");
     response.json({ token });
   }
+
+  getFriendCounts = async (
+    request: express.Request,
+    response: express.Response,
+    next: express.NextFunction,
+  ) => {
+    try {
+      const { userId } = request.user;
+
+      const [totalPendingRequests, totalSuggestedFriends] = await Promise.all([
+        this.friendShipRepo.getTotalPendingFriendRequests(userId),
+        this.friendShipRepo.getTotalSuggestedFriends(userId)
+      ]);
+
+      response.json({
+        totalPendingRequests,
+        totalSuggestedFriends
+      });
+    } catch (error) {
+      next(new HttpException(500, "Failed to fetch friend counts"));
+    }
+  };
 }
