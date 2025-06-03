@@ -5,8 +5,8 @@ import authWebSocketMiddleware from "../../middlewares/authWebSocket.middleware"
 import NotificationRepository from "../../repositories/notificationRepository";
 import UserRepository from "../../repositories/UserRepository";
 import { decrypt, encrypt } from "../../helpers/Encryption";
+import PQueue from "p-queue";
 import { FileTypeDirectStatus } from "@prisma/client";
-import redisClient from "../../configs/redis";
 
 interface previewFiles {
   url: string;
@@ -30,8 +30,7 @@ export class Chat1v1Controller {
   private readonly chat1v1Repo: Chat1v1Repository;
   private readonly notiRepo: NotificationRepository;
   private readonly userRepo: UserRepository;
-  private readonly messageQueueKey = 'chat_message_queue';
-  private isProcessing = false;
+  private readonly messageQueue: PQueue;
 
   constructor(
     io: Server,
@@ -45,149 +44,8 @@ export class Chat1v1Controller {
     this.chat1v1Repo = chat1v1Repo;
     this.notiRepo = notiRepo;
     this.userRepo = userRepo;
+    this.messageQueue = new PQueue({ concurrency: 1 });
     this.setupSocketEvents();
-    this.initializeMessageProcessor();
-  }
-
-  private async initializeMessageProcessor() {
-    try {
-      // Ensure Redis is connected
-      if (!redisClient.isOpen) {
-        await redisClient.connect();
-      }
-      this.startMessageProcessor();
-    } catch (error) {
-      console.error('Failed to initialize message processor:', error);
-      // Retry after 5 seconds
-      setTimeout(() => this.initializeMessageProcessor(), 5000);
-    }
-  }
-
-  private async startMessageProcessor() {
-    while (true) {
-      try {
-        if (!this.isProcessing && redisClient.isOpen) {
-          const message = await redisClient.lPop(this.messageQueueKey);
-          if (message) {
-            this.isProcessing = true;
-            try {
-              const messageData = JSON.parse(message);
-              await this.processMessage(messageData);
-            } catch (error) {
-              console.error('Error processing message:', error);
-            } finally {
-              this.isProcessing = false;
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error in message processor:', error);
-        // If Redis connection is lost, try to reconnect
-        if (!redisClient.isOpen) {
-          await redisClient.connect();
-        }
-      }
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-  }
-
-  private async processMessage(messageData: SendMessage) {
-    const {
-      id,
-      senderId,
-      receiverId,
-      message,
-      replyMessage,
-      previewFiles,
-    } = messageData;
-    if (!senderId || !receiverId) return;
-    if (!message && previewFiles?.length === 0) return;
-    const encrypted = encrypt(message);
-
-    const savedMessage = await this.chat1v1Repo.saveMessage(
-      senderId,
-      receiverId,
-      String(encrypted),
-    );
-    let ArrayFile: Awaited<ReturnType<typeof this.chat1v1Repo.createFile>>[] = [];
-    if (previewFiles && previewFiles?.length > 0) {
-      previewFiles.forEach(async (file) => {
-        const dataFile = await this.chat1v1Repo.createFile(
-          Number(senderId),
-          savedMessage.id,
-          file.type,
-          file.url,
-        );
-        ArrayFile.push(dataFile);
-      });
-    }
-
-    if (replyMessage && replyMessage.replyMessageId !== null) {
-      await this.chat1v1Repo.SaveReplyMessage(
-        savedMessage.id,
-        replyMessage.replyMessageId,
-      );
-    }
-    const fullSavedMessage = await this.chat1v1Repo.getMessageById(
-      savedMessage.id,
-    );
-    if (!fullSavedMessage) {
-      console.log(`Không tìm thấy tin nhắn với ID: ${savedMessage.id}`);
-      return;
-    }
-    const decryptedMessage = {
-      ...fullSavedMessage,
-      content: decrypt(fullSavedMessage.content),
-      waitingId: id,
-      FileMessages:
-        ArrayFile.length > 0
-          ? ArrayFile.map((file) => ({
-            userId: file.userId,
-            field: file.field,
-            fieldType: file.fieldType,
-            messageId: file.messageId,
-          }))
-          : null,
-      RepliesReceived:
-        fullSavedMessage.RepliesReceived.length > 0
-          ? {
-            replyMessageId:
-              fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
-              null,
-            ReplyMessage: {
-              id:
-                fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
-                null,
-              content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
-                ?.content
-                ? decrypt(
-                  fullSavedMessage.RepliesReceived[0].ReplyMessage
-                    .content,
-                )
-                : null,
-              senderId:
-                fullSavedMessage.RepliesReceived[0]?.ReplyMessage
-                  ?.senderId ?? null,
-            },
-          }
-          : null,
-    };
-
-    await this.notiRepo.sendPushNotification(
-      receiverId,
-      `${fullSavedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
-    );
-
-    const receiverChats = await this.chat1v1Repo.ListRecentChats(
-      receiverId,
-    );
-    this.io
-      .to(`user-${receiverId}`)
-      .emit("recentChatsList", receiverChats);
-
-    const sortedIds = [String(senderId), String(receiverId)].sort();
-    const chatRoomId = `chatRoom-${sortedIds[0]}-${sortedIds[1]}`;
-    this.io.of("/chat1v1").to(chatRoomId).emit("newMessage", decryptedMessage);
   }
 
   private setupSocketEvents() {
@@ -218,16 +76,105 @@ export class Chat1v1Controller {
         .emit("InformationChatWithUserId", InformationChatWithUserId);
 
       socket.on("sendMessage", async (messageData: SendMessage) => {
-        try {
-          if (!redisClient.isOpen) {
-            await redisClient.connect();
+        this.messageQueue.add(async () => {
+          const {
+            id,
+            senderId,
+            receiverId,
+            message,
+            replyMessage,
+            previewFiles,
+          } = messageData;
+          if (!senderId || !receiverId) return;
+          if (!message && previewFiles?.length === 0) return;
+          const encrypted = encrypt(message);
+
+          const savedMessage = await this.chat1v1Repo.saveMessage(
+            senderId,
+            receiverId,
+            String(encrypted),
+          );
+          let ArrayFile: Awaited<
+            ReturnType<typeof this.chat1v1Repo.createFile>
+          >[] = [];
+          if (previewFiles && previewFiles?.length > 0) {
+            previewFiles.forEach(async (file) => {
+              const dataFile = await this.chat1v1Repo.createFile(
+                Number(senderId),
+                savedMessage.id,
+                file.type,
+                file.url,
+              );
+              ArrayFile.push(dataFile);
+            });
           }
-          await redisClient.rPush(this.messageQueueKey, JSON.stringify(messageData));
-        } catch (error) {
-          console.error('Error sending message to queue:', error);
-          // Notify client about the error
-          socket.emit('messageError', { error: 'Failed to send message' });
-        }
+
+          if (replyMessage && replyMessage.replyMessageId !== null) {
+            await this.chat1v1Repo.SaveReplyMessage(
+              savedMessage.id,
+              replyMessage.replyMessageId,
+            );
+          }
+          const fullSavedMessage = await this.chat1v1Repo.getMessageById(
+            savedMessage.id,
+          );
+          if (!fullSavedMessage) {
+            console.log(`Không tìm thấy tin nhắn với ID: ${savedMessage.id}`);
+            return;
+          }
+          const decryptedMessage = {
+            ...fullSavedMessage,
+            content: decrypt(fullSavedMessage.content),
+            waitingId: id,
+            FileMessages:
+              ArrayFile.length > 0
+                ? ArrayFile.map((file) => ({
+                  userId: file.userId,
+                  field: file.field,
+                  fieldType: file.fieldType,
+                  messageId: file.messageId,
+                }))
+                : null,
+            RepliesReceived:
+              fullSavedMessage.RepliesReceived.length > 0
+                ? {
+                  replyMessageId:
+                    fullSavedMessage.RepliesReceived[0]?.replyMessageId ??
+                    null,
+                  ReplyMessage: {
+                    id:
+                      fullSavedMessage.RepliesReceived[0]?.ReplyMessage?.id ??
+                      null,
+                    content: fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                      ?.content
+                      ? decrypt(
+                        fullSavedMessage.RepliesReceived[0].ReplyMessage
+                          .content,
+                      )
+                      : null,
+                    senderId:
+                      fullSavedMessage.RepliesReceived[0]?.ReplyMessage
+                        ?.senderId ?? null,
+                  },
+                }
+                : null,
+          };
+
+          await this.notiRepo.sendPushNotification(
+            receiverId,
+            `${fullSavedMessage.Sender.loginName} đã gửi tin nhắn cho bạn`,
+          );
+
+          const receiverChats = await this.chat1v1Repo.ListRecentChats(
+            receiverId,
+          );
+          this.io
+            .to(`user-${receiverId}`)
+            .emit("recentChatsList", receiverChats);
+
+          chatNamespace.to(chatRoomId).emit("newMessage", decryptedMessage);
+          ArrayFile = [];
+        });
       });
 
       // Xác nhận đã đọc tin nhắn
